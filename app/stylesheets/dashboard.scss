@@ -1,4 +1,18 @@
+@import "../../node_modules/bulma/bulma.sass";
 
 .dashboard {
+  .descriptive-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
 
+    .content {
+      text-align: center;
+    }
+  }
+
+  .white {
+    color: $white;
+  }
 }

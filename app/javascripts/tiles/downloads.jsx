@@ -84,11 +84,24 @@ var DownloadsTile = React.createClass({
         dataset.push(currentMonth.total);
       }
 
+      var lastThreeMonths = (dataset[dataset.length - 2] + dataset[dataset.length - 3] + dataset[dataset.length - 4]);
+      var prevThreeMonths = (dataset[dataset.length - 5] + dataset[dataset.length - 6] + dataset[dataset.length - 7]);
+
+      var growth = (lastThreeMonths / prevThreeMonths) - 1;
+      var direction = growth < 0 ? "down" : "up";
+      growth = Math.floor(Math.abs(growth * 100));
+
       self.setState({
         data: data,
-        total: total
+        total: total,
+        growth: growth,
+        growth_direction: direction
       });
     });
+  },
+
+  numberWithCommas: function(x) {
+    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   },
 
   render: function() {
@@ -111,12 +124,25 @@ var DownloadsTile = React.createClass({
           </div>
         </div>
         <div className="tile is-vertical is-parent">
-          <div className="tile is-child notification is-warning">
-            Total Downloads
-            <br/>{this.state.total}
+          <div className="tile is-child notification is-warning descriptive-tile">
+            <div>
+              Total Downloads
+            </div>
+            <div className="content is-large is-marginless">
+              <h1 className="is-marginless">{this.numberWithCommas(this.state.total)}</h1>
+            </div>
+            <div></div>
           </div>
-          <div className="tile is-child notification is-warning">
-
+          <div className="tile is-child notification is-info descriptive-tile">
+            <div>
+              Last Three Months
+            </div>
+            <div className="content is-large is-marginless">
+              <h1 className="white is-marginless">{this.state.growth_direction} {this.state.growth}%</h1>
+            </div>
+            <div>
+              * excludes current month
+            </div>
           </div>
         </div>
       </div>
