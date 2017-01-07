@@ -9,7 +9,7 @@ module.exports = {
     dashboard: './app/javascripts/dashboard.jsx',
   },
   output: {
-    path: "./build",
+    path: "./docs",
     filename: '[name].js'
   },
   module: {
