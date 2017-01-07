@@ -4008,3 +4008,20 @@ label.panel-block {
 .footer {
   background-color: whitesmoke;
   padding: 3rem 1.5rem 6rem; }
+
+.dashboard .descriptive-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch; }
+  .dashboard .descriptive-tile .content {
+    text-align: center; }
+
+.dashboard .white {
+  color: white; }
+
+.dashboard .no-left-padding {
+  padding-left: 0; }
+
+.dashboard .no-right-padding {
+  padding-right: 0; }
