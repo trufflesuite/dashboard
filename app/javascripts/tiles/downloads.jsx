@@ -28,6 +28,10 @@ var DownloadsTile = React.createClass({
   componentDidMount: function() {
     var self = this;
 
+    axios.get("https://gitter.im/explore/tags/ethereum", function(r) {
+      console.log(r);
+    })
+
     var date = new Date();
     date = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
 

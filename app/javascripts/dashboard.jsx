@@ -8,6 +8,7 @@ import Footer from "./footer.jsx";
 
 import DownloadsTile from "./tiles/downloads.jsx";
 import StargazersTile from "./tiles/stargazers.jsx";
+import TotalDownloadsTile from "./tiles/totaldownloads.jsx";
 
 var Dashboard = React.createClass({
   render: function() {
@@ -34,7 +35,8 @@ var Dashboard = React.createClass({
             </h2>
             <div className="tile is-ancestor">
               <div className="tile is-12">
-                <StargazersTile projects={["Consensys/truffle", "nexusdev/dapple", "iurimatias/embark-framework", "pipermerriam/populus"]}/>
+                <StargazersTile projects={["Consensys/truffle", "nexusdev/dapple", "iurimatias/embark-framework"]}/>
+                <TotalDownloadsTile packages={["truffle", "embark-framework", "dapple"] } />
               </div>
             </div>
 

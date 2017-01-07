@@ -6,7 +6,7 @@ var Header = React.createClass({
       <div className="container">
         <nav className="nav">
           <div className="nav-left">
-            <a className="nav-item is-paddingless">
+            <a className="nav-item no-left-padding">
               <img src="/images/logo-horiz.png" alt="Truffle logo" />
             </a>
           </div>
@@ -41,7 +41,7 @@ var Header = React.createClass({
               Tutorials
             </a>
 
-            <span className="nav-item is-paddingless">
+            <span className="nav-item no-right-padding">
               <a className="button is-primary" href="http://truffleframework.com">
                 <span>Download Truffle</span>
               </a>

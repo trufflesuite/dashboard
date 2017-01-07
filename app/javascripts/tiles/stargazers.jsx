@@ -154,11 +154,6 @@ var StargazersTile = React.createClass({
         var project = self.props.projects[index];
         var name = project.substring(project.indexOf("/") + 1);
 
-        // Special for embark
-        if (name.indexOf("-") >= 0) {
-          name = name.substring(0, name.indexOf("-"));
-        }
-
         return {
           label: name + " (" + data.total + ")",
           fill: false,
