@@ -21594,7 +21594,7 @@
 	          _react2.default.createElement(
 	            "a",
 	            { className: "nav-item no-left-padding" },
-	            _react2.default.createElement("img", { src: "/images/logo-horiz.png", alt: "Truffle logo" })
+	            _react2.default.createElement("img", { src: "/dashboard/images/logo-horiz.png", alt: "Truffle logo" })
 	          )
 	        ),
 	        _react2.default.createElement(

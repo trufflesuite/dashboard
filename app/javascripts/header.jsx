@@ -7,7 +7,7 @@ var Header = React.createClass({
         <nav className="nav">
           <div className="nav-left">
             <a className="nav-item no-left-padding">
-              <img src="/images/logo-horiz.png" alt="Truffle logo" />
+              <img src="/dashboard/images/logo-horiz.png" alt="Truffle logo" />
             </a>
           </div>
 
