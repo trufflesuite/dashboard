@@ -116,7 +116,7 @@ var DownloadsTile = React.createClass({
     } else {
       chart = <Line data={this.state.data} options={{
         legend: {display: false},
-        title: {display: true, text: "Lifetime Downloads"}
+        title: {display: true, text: "Monthly Downloads"}
       }}/>;
     }
 
@@ -130,7 +130,7 @@ var DownloadsTile = React.createClass({
         <div className="tile is-vertical is-parent">
           <div className="tile is-child notification is-warning descriptive-tile">
             <div>
-              Total Downloads
+              Lifetime Downloads
             </div>
             <div className="content is-large is-marginless">
               <h1 className="is-marginless">{this.numberWithCommas(this.state.total)}</h1>

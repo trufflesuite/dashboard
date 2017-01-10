@@ -21839,7 +21839,7 @@
 	    } else {
 	      chart = _react2.default.createElement(_reactChartjs.Line, { data: this.state.data, options: {
 	          legend: { display: false },
-	          title: { display: true, text: "Lifetime Downloads" }
+	          title: { display: true, text: "Monthly Downloads" }
 	        } });
 	    }
 
@@ -21864,7 +21864,7 @@
 	          _react2.default.createElement(
 	            "div",
 	            null,
-	            "Total Downloads"
+	            "Lifetime Downloads"
 	          ),
 	          _react2.default.createElement(
 	            "div",
