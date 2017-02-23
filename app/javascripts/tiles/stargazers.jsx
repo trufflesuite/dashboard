@@ -2,7 +2,7 @@ import React from "react";
 import moment from "moment";
 import {Line} from 'react-chartjs-2';
 import axios from "axios";
-import {parellel, map} from "async";
+import {parellel, mapSeries} from "async";
 import parselink from "parse-link-header";
 import Tokens from "../tokens.js";
 
@@ -81,7 +81,7 @@ var StargazersTile = React.createClass({
   componentDidMount: function() {
     var self = this;
 
-    map(this.props.projects, function(project, finished) {
+    mapSeries(this.props.projects, function(project, finished) {
       self.requestStarsForProject(project, finished);
     }, function(err, sets) {
       if (err) return console.log(err);

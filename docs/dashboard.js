@@ -51340,7 +51340,7 @@
 	  componentDidMount: function componentDidMount() {
 	    var self = this;
 
-	    (0, _async.map)(this.props.projects, function (project, finished) {
+	    (0, _async.mapSeries)(this.props.projects, function (project, finished) {
 	      self.requestStarsForProject(project, finished);
 	    }, function (err, sets) {
 	      if (err) return console.log(err);
