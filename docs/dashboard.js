@@ -68,11 +68,11 @@
 
 	var _downloads2 = _interopRequireDefault(_downloads);
 
-	var _stargazers = __webpack_require__(364);
+	var _stargazers = __webpack_require__(366);
 
 	var _stargazers2 = _interopRequireDefault(_stargazers);
 
-	var _totaldownloads = __webpack_require__(377);
+	var _totaldownloads = __webpack_require__(379);
 
 	var _totaldownloads2 = _interopRequireDefault(_totaldownloads);
 
@@ -21732,7 +21732,7 @@
 
 	var _reactChartjs = __webpack_require__(183);
 
-	var _axios = __webpack_require__(339);
+	var _axios = __webpack_require__(341);
 
 	var _axios2 = _interopRequireDefault(_axios);
 
@@ -21750,6 +21750,13 @@
 	    };
 	  },
 
+	  getMonth: function getMonth(day) {
+	    if (day instanceof Date == false) {
+	      day = new Date(day);
+	    }
+	    return months[day.getMonth()] + " " + day.getFullYear();
+	  },
+
 	  componentDidMount: function componentDidMount() {
 	    var self = this;
 
@@ -21763,41 +21770,63 @@
 	    _axios2.default.get("https://api.npmjs.org/downloads/range/2015-05-01:" + date + "/truffle").then(function (response) {
 	      var total = 0;
 	      var downloads = response.data.downloads;
+
+	      var showCurrent = window.location.hash.toLowerCase().indexOf("current") >= 0;
+
 	      var data = {
 	        labels: [],
 	        datasets: [{
 	          fill: false,
 	          lineTension: 0.3,
-	          backgroundColor: 'black',
-	          borderColor: 'white',
+	          borderWidth: 0.1,
 	          pointBackgroundColor: 'white',
 	          pointBorderColor: 'white',
 	          pointHitRadius: 10,
 	          pointBorderWidth: 5,
 	          pointRadius: 1,
-	          pointHoverRadius: 5,
+	          pointHoverBackgroundColor: "white",
+	          pointHoverRadius: 4,
+	          pointHoverBorderWidth: 2,
+	          pointHoverBorderColor: "white",
 	          data: []
+	        }, {
+	          fill: false,
+	          lineTension: 0.3,
+	          borderWidth: 0.1,
+	          pointBackgroundColor: 'black',
+	          pointBorderColor: 'black',
+	          pointHitRadius: 10,
+	          pointBorderWidth: 3,
+	          pointRadius: 5,
+	          pointHoverRadius: 5,
+	          pointHoverBorderColor: "white",
+	          pointStyle: "crossRot",
+	          data: [],
+	          hidden: !showCurrent
 	        }]
 	      };
 
-	      var dataset = data.datasets[0].data;
+	      // Set and id for later.
+	      data.__id = "Downloads";
 
-	      function getMonth(day) {
-	        var d = new Date(day);
-	        return months[d.getMonth()] + " " + d.getFullYear();
-	      }
+	      var maindataset = data.datasets[0].data;
+	      var actualdataset = data.datasets[1].data;
 
 	      var currentMonth = {
-	        label: getMonth(downloads[0].day),
+	        label: self.getMonth(downloads[0].day),
 	        total: 0
 	      };
 
 	      downloads.forEach(function (item) {
-	        var month = getMonth(item.day);
+	        var month = self.getMonth(item.day);
 
 	        if (month != currentMonth.label) {
+	          // Update the labels.
 	          data.labels.push(currentMonth.label);
-	          dataset.push(currentMonth.total);
+
+	          // Update the datasets
+	          maindataset.push(currentMonth.total);
+	          actualdataset.push(null);
 
 	          currentMonth = { label: month, total: 0 };
 	        }
@@ -21806,25 +21835,194 @@
 	        total += item.downloads;
 	      });
 
-	      if (data.labels[data.labels.length - 1] != currentMonth.label) {
-	        data.labels.push(currentMonth.label);
-	        dataset.push(currentMonth.total);
-	      }
+	      // Don't add the last month for now (that's why this is commented out).
 
-	      var lastThreeMonths = dataset[dataset.length - 2] + dataset[dataset.length - 3] + dataset[dataset.length - 4];
-	      var prevThreeMonths = dataset[dataset.length - 5] + dataset[dataset.length - 6] + dataset[dataset.length - 7];
+	      // if (data.labels[data.labels.length - 1] != currentMonth.label) {
+	      //   data.labels.push(currentMonth.label);
+	      //   maindataset.push(currentMonth.total);
+	      //   actualdataset.push(null);
+	      // }
+
+	      var lastThreeMonths = maindataset[maindataset.length - 2] + maindataset[maindataset.length - 3] + maindataset[maindataset.length - 4];
+	      var prevThreeMonths = maindataset[maindataset.length - 5] + maindataset[maindataset.length - 6] + maindataset[maindataset.length - 7];
 
 	      var growth = lastThreeMonths / prevThreeMonths - 1;
 	      var direction = growth < 0 ? "down" : "up";
 	      growth = Math.floor(Math.abs(growth * 100));
 
+	      // Make sure the projected dataset has the last two points.
+	      // Then op off the last data point on the main dataset so the
+	      // projected dataset shows through.
+	      // var currentMonthDownloads = maindataset[maindataset.length - 1];
+	      // var lastMonthDownloads = maindataset[maindataset.length - 2];
+	      // var projectedCurrentMonthDownloads = parseInt(lastMonthDownloads * .9);
+	      //
+	      // var showProjected = projectedCurrentMonthDownloads > currentMonthDownloads;
+	      //
+	      // if (showProjected) {
+	      //   maindataset.pop();
+	      //   maindataset.push(projectedCurrentMonthDownloads)
+	      //
+	      //   actualdataset.pop();
+	      //   actualdataset.push(currentMonthDownloads);
+	      // }
+
 	      self.setState({
 	        data: data,
 	        total: total,
 	        growth: growth,
-	        growth_direction: direction
+	        growth_direction: direction,
+	        show_projected: false
 	      });
 	    });
+
+	    _reactChartjs.Chart.pluginService.register({
+	      afterDatasetsDraw: function afterDatasetsDraw(chart) {
+	        if (chart.config.data.__id == "Downloads") {
+	          self.drawCustomCurveLine(chart);
+	        };
+	      }
+	    });
+	  },
+
+	  drawCustomCurveLine: function drawCustomCurveLine(chart) {
+	    var self = this;
+
+	    var meta = chart.data.datasets[0]._meta;
+	    var points = meta[Object.keys(meta)[0]].data;
+
+	    var ctx = chart.chart.ctx;
+
+	    // Put points in a way the line algorith likes it.
+	    var _points = [];
+	    points.forEach(function (point) {
+	      _points.push(point._model.x);
+	      _points.push(point._model.y);
+	    });
+
+	    points = _points;
+
+	    ctx.save();
+	    ctx.globalCompositeOperation = 'destination-over';
+
+	    ctx.beginPath();
+	    ctx.strokeStyle = 'white';
+	    ctx.lineWidth = 4;
+
+	    var curveData = getCurve(points, 0.45, 30);
+
+	    // Draw main line. We're going to draw all lines between points
+	    // except for the last one.
+	    ctx.moveTo(points[0], points[1]);
+
+	    var lastAnchorPoint = curveData.anchors[curveData.anchors.length - 2];
+
+	    if (self.state.show_projected == false) {
+	      lastAnchorPoint = curveData.anchors[curveData.anchors.length - 1];
+	    }
+
+	    for (var i = 2; i <= lastAnchorPoint; i += 2) {
+	      var x = curveData.points[i];
+	      var y = curveData.points[i + 1];
+	      ctx.lineTo(x, y);
+	    }
+
+	    ctx.stroke();
+
+	    if (self.state.show_projected) {
+	      // Now draw the last portion of the line, but dashed.
+	      ctx.beginPath();
+	      ctx.setLineDash([10, 5]);
+
+	      for (var i = lastAnchorPoint + 1; i < curveData.points.length - 1; i += 2) {
+	        var x = curveData.points[i];
+	        var y = curveData.points[i + 1];
+	        ctx.lineTo(x, y);
+	      }
+
+	      ctx.stroke();
+	    }
+
+	    ctx.restore();
+
+	    function getCurve(pts, tension, numOfSegments) {
+	      // use input value if provided, or use a default value
+	      tension = typeof tension != 'undefined' ? tension : 0.5;
+	      numOfSegments = numOfSegments ? numOfSegments : 16;
+
+	      var _pts = [],
+	          res = [],
+	          // clone array
+	      x,
+	          y,
+	          // our x,y coords
+	      t1x,
+	          t2x,
+	          t1y,
+	          t2y,
+	          // tension vectors
+	      c1,
+	          c2,
+	          c3,
+	          c4,
+	          // cardinal points
+	      st,
+	          t,
+	          i,
+	          // steps based on num. of segments
+	      anchors; // indexes of lines related to each point.
+
+	      anchors = [];
+	      anchors[0] = 0;
+
+	      // clone array so we don't change the original
+	      _pts = pts.slice(0);
+
+	      // The algorithm require a previous and next point to the actual point array.
+	      _pts.unshift(pts[1]); //copy 1. point and insert at beginning
+	      _pts.unshift(pts[0]);
+	      _pts.push(pts[pts.length - 2]); //copy last point and append
+	      _pts.push(pts[pts.length - 1]);
+
+	      // ok, lets start..
+
+	      // 1. loop goes through point array
+	      // 2. loop goes through each segment between the 2 pts + 1e point before and after
+	      for (var i = 2; i < _pts.length - 4; i += 2) {
+	        for (var t = 0; t <= numOfSegments; t++) {
+	          // calc tension vectors
+	          t1x = (_pts[i + 2] - _pts[i - 2]) * tension;
+	          t2x = (_pts[i + 4] - _pts[i]) * tension;
+
+	          t1y = (_pts[i + 3] - _pts[i - 1]) * tension;
+	          t2y = (_pts[i + 5] - _pts[i + 1]) * tension;
+
+	          // calc step
+	          st = t / numOfSegments;
+
+	          // calc cardinals
+	          c1 = 2 * Math.pow(st, 3) - 3 * Math.pow(st, 2) + 1;
+	          c2 = -(2 * Math.pow(st, 3)) + 3 * Math.pow(st, 2);
+	          c3 = Math.pow(st, 3) - 2 * Math.pow(st, 2) + st;
+	          c4 = Math.pow(st, 3) - Math.pow(st, 2);
+
+	          // calc x and y cords with common control vectors
+	          x = c1 * _pts[i] + c2 * _pts[i + 2] + c3 * t1x + c4 * t2x;
+	          y = c1 * _pts[i + 1] + c2 * _pts[i + 3] + c3 * t1y + c4 * t2y;
+
+	          //store points in array
+	          res.push(x);
+	          res.push(y);
+	        }
+
+	        anchors.push(res.length - 1);
+	      }
+
+	      return {
+	        points: res,
+	        anchors: anchors
+	      };
+	    }
 	  },
 
 	  numberWithCommas: function numberWithCommas(x) {
@@ -21832,14 +22030,36 @@
 	  },
 
 	  render: function render() {
+	    var self = this;
 	    var chart;
 
 	    if (this.state.data == null) {
 	      chart = _react2.default.createElement("div", null);
 	    } else {
-	      chart = _react2.default.createElement(_reactChartjs.Line, { data: this.state.data, options: {
+	      chart = _react2.default.createElement(_reactChartjs.Line, { ref: "downloads", data: self.state.data, options: {
 	          legend: { display: false },
-	          title: { display: true, text: "Monthly Downloads" }
+	          title: { display: true, text: "Monthly Downloads" },
+	          animation: false,
+	          tooltips: {
+	            displayColors: false,
+	            callbacks: {
+	              beforeTitle: function beforeTitle(tooltip) {
+	                // If it's the first dataset.
+	                if (tooltip[0].datasetIndex == 0) {
+	                  var current = self.getMonth(new Date());
+
+	                  if (tooltip[0].xLabel == current) {
+	                    return "Projected downloads in";
+	                  } else {
+	                    return "Downloads in";
+	                  }
+	                } else {
+	                  // it's the actual data set for the current month. Display it as normal.
+	                  return "Downloads in";
+	                }
+	              }
+	            }
+	          }
 	        } });
 	    }
 
@@ -21937,7 +22157,7 @@
 
 	var _chart2 = _interopRequireDefault(_chart);
 
-	var _lodash = __webpack_require__(338);
+	var _lodash = __webpack_require__(340);
 
 	var _lodash2 = _interopRequireDefault(_lodash);
 
@@ -22035,12 +22255,25 @@
 	        return true;
 	      }
 
-	      return !(0, _lodash2.default)(this.shadowDataProp, nextProps.data);
+	      var nextData = this.transformDataProp(nextProps);
+	      return !(0, _lodash2.default)(this.shadowDataProp, nextData);
 	    }
 	  }, {
 	    key: 'componentWillUnmount',
 	    value: function componentWillUnmount() {
 	      this.chart_instance.destroy();
+	    }
+	  }, {
+	    key: 'transformDataProp',
+	    value: function transformDataProp(props) {
+	      var data = props.data;
+
+	      if (typeof data == "function") {
+	        var node = _reactDom2.default.findDOMNode(this);
+	        return data(node);
+	      } else {
+	        return data;
+	      }
 	    }
 
 	    // Chart.js directly mutates the data.dataset objects by adding _meta proprerty
@@ -22051,28 +22284,27 @@
 	  }, {
 	    key: 'memoizeDataProps',
 	    value: function memoizeDataProps() {
-	      var data = this.props.data;
-
-
-	      if (!data) {
+	      if (!this.props.data) {
 	        return;
 	      }
 
+	      var data = this.transformDataProp(this.props);
+
 	      this.shadowDataProp = _extends({}, data, {
 	        datasets: data.datasets && data.datasets.map(function (set) {
-	          return Object.assign({}, set);
+	          return _extends({}, set);
 	        })
 	      });
+
+	      return data;
 	    }
 	  }, {
 	    key: 'updateChart',
 	    value: function updateChart() {
-	      var _props2 = this.props,
-	          data = _props2.data,
-	          options = _props2.options;
+	      var options = this.props.options;
 
 
-	      this.memoizeDataProps();
+	      var data = this.memoizeDataProps(this.props);
 
 	      if (!this.chart_instance) return;
 
@@ -22084,6 +22316,11 @@
 	      // seamless transitions
 	      var currentDatasets = this.chart_instance.config.data && this.chart_instance.config.data.datasets || [];
 	      var nextDatasets = data.datasets || [];
+
+	      // Prevent charting of legend items that no longer exist
+	      while (currentDatasets.length > nextDatasets.length) {
+	        currentDatasets.pop();
+	      }
 
 	      nextDatasets.forEach(function (dataset, sid) {
 	        if (currentDatasets[sid] && currentDatasets[sid].data) {
@@ -22114,16 +22351,14 @@
 	  }, {
 	    key: 'renderChart',
 	    value: function renderChart() {
-	      var _props3 = this.props,
-	          data = _props3.data,
-	          options = _props3.options,
-	          legend = _props3.legend,
-	          type = _props3.type,
-	          redraw = _props3.redraw;
+	      var _props2 = this.props,
+	          options = _props2.options,
+	          legend = _props2.legend,
+	          type = _props2.type,
+	          redraw = _props2.redraw;
 
 	      var node = _reactDom2.default.findDOMNode(this);
-
-	      this.memoizeDataProps();
+	      var data = this.memoizeDataProps();
 
 	      this.chart_instance = new _chart2.default(node, {
 	        type: type,
@@ -22134,10 +22369,10 @@
 	  }, {
 	    key: 'render',
 	    value: function render() {
-	      var _props4 = this.props,
-	          height = _props4.height,
-	          width = _props4.width,
-	          onElementsClick = _props4.onElementsClick;
+	      var _props3 = this.props,
+	          height = _props3.height,
+	          width = _props3.width,
+	          onElementsClick = _props3.onElementsClick;
 
 
 	      return _react2.default.createElement('canvas', {
@@ -22152,7 +22387,7 @@
 	}(_react2.default.Component);
 
 	ChartComponent.propTypes = {
-	  data: _react.PropTypes.object.isRequired,
+	  data: _react.PropTypes.oneOfType([_react.PropTypes.object, _react.PropTypes.func]).isRequired,
 	  getDatasetAtEvent: _react.PropTypes.func,
 	  getElementAtEvent: _react.PropTypes.func,
 	  getElementsAtEvent: _react.PropTypes.func,
@@ -22410,35 +22645,37 @@
 	__webpack_require__(201)(Chart);
 	__webpack_require__(202)(Chart);
 	__webpack_require__(203)(Chart);
-
 	__webpack_require__(204)(Chart);
 	__webpack_require__(205)(Chart);
+
 	__webpack_require__(206)(Chart);
 	__webpack_require__(207)(Chart);
-
 	__webpack_require__(208)(Chart);
 	__webpack_require__(209)(Chart);
+
 	__webpack_require__(210)(Chart);
 	__webpack_require__(211)(Chart);
 	__webpack_require__(212)(Chart);
 	__webpack_require__(213)(Chart);
+	__webpack_require__(214)(Chart);
+	__webpack_require__(215)(Chart);
 
 	// Controllers must be loaded after elements
 	// See Chart.core.datasetController.dataElementType
-	__webpack_require__(325)(Chart);
-	__webpack_require__(326)(Chart);
 	__webpack_require__(327)(Chart);
 	__webpack_require__(328)(Chart);
 	__webpack_require__(329)(Chart);
 	__webpack_require__(330)(Chart);
-
 	__webpack_require__(331)(Chart);
 	__webpack_require__(332)(Chart);
+
 	__webpack_require__(333)(Chart);
 	__webpack_require__(334)(Chart);
 	__webpack_require__(335)(Chart);
 	__webpack_require__(336)(Chart);
 	__webpack_require__(337)(Chart);
+	__webpack_require__(338)(Chart);
+	__webpack_require__(339)(Chart);
 
 	window.Chart = module.exports = Chart;
 
@@ -22452,63 +22689,9 @@
 	module.exports = function() {
 
 		// Occupy the global variable of Chart, and create a simple base class
-		var Chart = function(context, config) {
-			var me = this;
-			var helpers = Chart.helpers;
-			me.config = config || {
-				data: {
-					datasets: []
-				}
-			};
-
-			// Support a jQuery'd canvas element
-			if (context.length && context[0].getContext) {
-				context = context[0];
-			}
-
-			// Support a canvas domnode
-			if (context.getContext) {
-				context = context.getContext('2d');
-			}
-
-			me.ctx = context;
-			me.canvas = context.canvas;
-
-			context.canvas.style.display = context.canvas.style.display || 'block';
-
-			// Figure out what the size of the chart will be.
-			// If the canvas has a specified width and height, we use those else
-			// we look to see if the canvas node has a CSS width and height.
-			// If there is still no height, fill the parent container
-			me.width = context.canvas.width || parseInt(helpers.getStyle(context.canvas, 'width'), 10) || helpers.getMaximumWidth(context.canvas);
-			me.height = context.canvas.height || parseInt(helpers.getStyle(context.canvas, 'height'), 10) || helpers.getMaximumHeight(context.canvas);
-
-			me.aspectRatio = me.width / me.height;
-
-			if (isNaN(me.aspectRatio) || isFinite(me.aspectRatio) === false) {
-				// If the canvas has no size, try and figure out what the aspect ratio will be.
-				// Some charts prefer square canvases (pie, radar, etc). If that is specified, use that
-				// else use the canvas default ratio of 2
-				me.aspectRatio = config.aspectRatio !== undefined ? config.aspectRatio : 2;
-			}
-
-			// Store the original style of the element so we can set it back
-			me.originalCanvasStyleWidth = context.canvas.style.width;
-			me.originalCanvasStyleHeight = context.canvas.style.height;
-
-			// High pixel density displays - multiply the size of the canvas height/width by the device pixel ratio, then scale.
-			helpers.retinaScale(me);
-			me.controller = new Chart.Controller(me);
-
-			// Always bind this so that if the responsive state changes we still work
-			helpers.addResizeListener(context.canvas.parentNode, function() {
-				if (me.controller && me.controller.config.options.responsive) {
-					me.controller.resize();
-				}
-			});
-
-			return me.controller ? me.controller : me;
-
+		var Chart = function(item, config) {
+			this.controller = new Chart.Controller(item, config, this);
+			return this.controller;
 		};
 
 		// Globally expose the defaults to allow for user updating/changing
@@ -22520,7 +22703,8 @@
 				events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
 				hover: {
 					onHover: null,
-					mode: 'single',
+					mode: 'nearest',
+					intersect: true,
 					animationDuration: 400
 				},
 				onClick: null,
@@ -22555,7 +22739,6 @@
 		Chart.Chart = Chart;
 
 		return Chart;
-
 	};
 
 
@@ -22623,37 +22806,23 @@
 			var base = helpers.clone(_base);
 			helpers.each(Array.prototype.slice.call(arguments, 1), function(extension) {
 				helpers.each(extension, function(value, key) {
-					if (key === 'scales') {
-						// Scale config merging is complex. Add out own function here for that
-						base[key] = helpers.scaleMerge(base.hasOwnProperty(key) ? base[key] : {}, value);
+					var baseHasProperty = base.hasOwnProperty(key);
+					var baseVal = baseHasProperty ? base[key] : {};
 
+					if (key === 'scales') {
+						// Scale config merging is complex. Add our own function here for that
+						base[key] = helpers.scaleMerge(baseVal, value);
 					} else if (key === 'scale') {
 						// Used in polar area & radar charts since there is only one scale
-						base[key] = helpers.configMerge(base.hasOwnProperty(key) ? base[key] : {}, Chart.scaleService.getScaleDefaults(value.type), value);
-					} else if (base.hasOwnProperty(key) && helpers.isArray(base[key]) && helpers.isArray(value)) {
-						// In this case we have an array of objects replacing another array. Rather than doing a strict replace,
-						// merge. This allows easy scale option merging
-						var baseArray = base[key];
-
-						helpers.each(value, function(valueObj, index) {
-
-							if (index < baseArray.length) {
-								if (typeof baseArray[index] === 'object' && baseArray[index] !== null && typeof valueObj === 'object' && valueObj !== null) {
-									// Two objects are coming together. Do a merge of them.
-									baseArray[index] = helpers.configMerge(baseArray[index], valueObj);
-								} else {
-									// Just overwrite in this case since there is nothing to merge
-									baseArray[index] = valueObj;
-								}
-							} else {
-								baseArray.push(valueObj); // nothing to merge
-							}
-						});
-
-					} else if (base.hasOwnProperty(key) && typeof base[key] === 'object' && base[key] !== null && typeof value === 'object') {
+						base[key] = helpers.configMerge(baseVal, Chart.scaleService.getScaleDefaults(value.type), value);
+					} else if (baseHasProperty
+							&& typeof baseVal === 'object'
+							&& !helpers.isArray(baseVal)
+							&& baseVal !== null
+							&& typeof value === 'object'
+							&& !helpers.isArray(value)) {
 						// If we are overwriting an object with an object, do a merge of the properties.
-						base[key] = helpers.configMerge(base[key], value);
-
+						base[key] = helpers.configMerge(baseVal, value);
 					} else {
 						// can just overwrite the value in this case
 						base[key] = value;
@@ -22872,6 +23041,9 @@
 				angle: angle,
 				distance: radialDistanceFromCenter
 			};
+		};
+		helpers.distanceBetweenPoints = function(pt1, pt2) {
+			return Math.sqrt(Math.pow(pt2.x - pt1.x, 2) + Math.pow(pt2.y - pt1.y, 2));
 		};
 		helpers.aliasPixel = function(pixelWidth) {
 			return (pixelWidth % 2 === 0) ? 0 : 0.5;
@@ -23408,25 +23580,24 @@
 				document.defaultView.getComputedStyle(el, null).getPropertyValue(property);
 		};
 		helpers.retinaScale = function(chart) {
-			var ctx = chart.ctx;
-			var canvas = chart.canvas;
-			var width = canvas.width;
-			var height = canvas.height;
 			var pixelRatio = chart.currentDevicePixelRatio = window.devicePixelRatio || 1;
-
-			if (pixelRatio !== 1) {
-				canvas.height = height * pixelRatio;
-				canvas.width = width * pixelRatio;
-				ctx.scale(pixelRatio, pixelRatio);
-
-				// Store the device pixel ratio so that we can go backwards in `destroy`.
-				// The devicePixelRatio changes with zoom, so there are no guarantees that it is the same
-				// when destroy is called
-				chart.originalDevicePixelRatio = chart.originalDevicePixelRatio || pixelRatio;
+			if (pixelRatio === 1) {
+				return;
 			}
 
-			canvas.style.width = width + 'px';
+			var canvas = chart.canvas;
+			var height = chart.height;
+			var width = chart.width;
+
+			canvas.height = height * pixelRatio;
+			canvas.width = width * pixelRatio;
+			chart.ctx.scale(pixelRatio, pixelRatio);
+
+			// If no style has been set on the canvas, the render size is used as display size,
+			// making the chart visually bigger, so let's enforce it to the "correct" values.
+			// See https://github.com/chartjs/Chart.js/issues/3575
 			canvas.style.height = height + 'px';
+			canvas.style.width = width + 'px';
 		};
 		// -- Canvas methods
 		helpers.clear = function(chart) {
@@ -23522,47 +23693,71 @@
 			return color(c);
 		};
 		helpers.addResizeListener = function(node, callback) {
-			// Hide an iframe before the node
-			var hiddenIframe = document.createElement('iframe');
-			var hiddenIframeClass = 'chartjs-hidden-iframe';
+			var iframe = document.createElement('iframe');
+			iframe.className = 'chartjs-hidden-iframe';
+			iframe.style.cssText =
+				'display:block;'+
+				'overflow:hidden;'+
+				'border:0;'+
+				'margin:0;'+
+				'top:0;'+
+				'left:0;'+
+				'bottom:0;'+
+				'right:0;'+
+				'height:100%;'+
+				'width:100%;'+
+				'position:absolute;'+
+				'pointer-events:none;'+
+				'z-index:-1;';
 
-			if (hiddenIframe.classlist) {
-				// can use classlist
-				hiddenIframe.classlist.add(hiddenIframeClass);
-			} else {
-				hiddenIframe.setAttribute('class', hiddenIframeClass);
-			}
+			// Prevent the iframe to gain focus on tab.
+			// https://github.com/chartjs/Chart.js/issues/3090
+			iframe.tabIndex = -1;
 
-			// Set the style
-			hiddenIframe.tabIndex = -1;
-			var style = hiddenIframe.style;
-			style.width = '100%';
-			style.display = 'block';
-			style.border = 0;
-			style.height = 0;
-			style.margin = 0;
-			style.position = 'absolute';
-			style.left = 0;
-			style.right = 0;
-			style.top = 0;
-			style.bottom = 0;
+			// Let's keep track of this added iframe and thus avoid DOM query when removing it.
+			var stub = node._chartjs = {
+				resizer: iframe,
+				ticking: false
+			};
 
-			// Insert the iframe so that contentWindow is available
-			node.insertBefore(hiddenIframe, node.firstChild);
-
-			(hiddenIframe.contentWindow || hiddenIframe).onresize = function() {
-				if (callback) {
-					return callback();
+			// Throttle the callback notification until the next animation frame.
+			var notify = function() {
+				if (!stub.ticking) {
+					stub.ticking = true;
+					helpers.requestAnimFrame.call(window, function() {
+						if (stub.resizer) {
+							stub.ticking = false;
+							return callback();
+						}
+					});
 				}
 			};
+
+			// If the iframe is re-attached to the DOM, the resize listener is removed because the
+			// content is reloaded, so make sure to install the handler after the iframe is loaded.
+			// https://github.com/chartjs/Chart.js/issues/3521
+			helpers.addEvent(iframe, 'load', function() {
+				helpers.addEvent(iframe.contentWindow || iframe, 'resize', notify);
+
+				// The iframe size might have changed while loading, which can also
+				// happen if the size has been changed while detached from the DOM.
+				notify();
+			});
+
+			node.insertBefore(iframe, node.firstChild);
 		};
 		helpers.removeResizeListener = function(node) {
-			var hiddenIframe = node.querySelector('.chartjs-hidden-iframe');
-
-			// Remove the resize detect iframe
-			if (hiddenIframe) {
-				hiddenIframe.parentNode.removeChild(hiddenIframe);
+			if (!node || !node._chartjs) {
+				return;
 			}
+
+			var iframe = node._chartjs.resizer;
+			if (iframe) {
+				iframe.parentNode.removeChild(iframe);
+				node._chartjs.resizer = null;
+			}
+
+			delete node._chartjs;
 		};
 		helpers.isArray = Array.isArray?
 			function(obj) {
@@ -25526,6 +25721,14 @@
 			animations: [],
 			dropFrames: 0,
 			request: null,
+
+			/**
+			 * @function Chart.animationService.addAnimation
+			 * @param chartInstance {ChartController} the chart to animate
+			 * @param animationObject {IAnimation} the animation that we will animate
+			 * @param duration {Number} length of animation in ms
+			 * @param lazy {Boolean} if true, the chart is not marked as animating to enable more responsive interactions
+			 */
 			addAnimation: function(chartInstance, animationObject, duration, lazy) {
 				var me = this;
 
@@ -25639,6 +25842,7 @@
 	module.exports = function(Chart) {
 
 		var helpers = Chart.helpers;
+
 		// Create a dictionary of chart types, to allow for extension of existing types
 		Chart.types = {};
 
@@ -25650,39 +25854,228 @@
 		Chart.controllers = {};
 
 		/**
-		 * @class Chart.Controller
-		 * The main controller of a chart.
+		 * The "used" size is the final value of a dimension property after all calculations have
+		 * been performed. This method uses the computed style of `element` but returns undefined
+		 * if the computed style is not expressed in pixels. That can happen in some cases where
+		 * `element` has a size relative to its parent and this last one is not yet displayed,
+		 * for example because of `display: none` on a parent node.
+		 * TODO(SB) Move this method in the upcoming core.platform class.
+		 * @see https://developer.mozilla.org/en-US/docs/Web/CSS/used_value
+		 * @returns {Number} Size in pixels or undefined if unknown.
 		 */
-		Chart.Controller = function(instance) {
+		function readUsedSize(element, property) {
+			var value = helpers.getStyle(element, property);
+			var matches = value && value.match(/(\d+)px/);
+			return matches? Number(matches[1]) : undefined;
+		}
 
-			this.chart = instance;
-			this.config = instance.config;
-			this.options = this.config.options = helpers.configMerge(Chart.defaults.global, Chart.defaults[this.config.type], this.config.options || {});
-			this.id = helpers.uid();
+		/**
+		 * Initializes the canvas style and render size without modifying the canvas display size,
+		 * since responsiveness is handled by the controller.resize() method. The config is used
+		 * to determine the aspect ratio to apply in case no explicit height has been specified.
+		 * TODO(SB) Move this method in the upcoming core.platform class.
+		 */
+		function initCanvas(canvas, config) {
+			var style = canvas.style;
 
-			Object.defineProperty(this, 'data', {
-				get: function() {
-					return this.config.data;
+			// NOTE(SB) canvas.getAttribute('width') !== canvas.width: in the first case it
+			// returns null or '' if no explicit value has been set to the canvas attribute.
+			var renderHeight = canvas.getAttribute('height');
+			var renderWidth = canvas.getAttribute('width');
+
+			// Chart.js modifies some canvas values that we want to restore on destroy
+			canvas._chartjs = {
+				initial: {
+					height: renderHeight,
+					width: renderWidth,
+					style: {
+						display: style.display,
+						height: style.height,
+						width: style.width
+					}
+				}
+			};
+
+			// Force canvas to display as block to avoid extra space caused by inline
+			// elements, which would interfere with the responsive resize process.
+			// https://github.com/chartjs/Chart.js/issues/2538
+			style.display = style.display || 'block';
+
+			if (renderWidth === null || renderWidth === '') {
+				var displayWidth = readUsedSize(canvas, 'width');
+				if (displayWidth !== undefined) {
+					canvas.width = displayWidth;
+				}
+			}
+
+			if (renderHeight === null || renderHeight === '') {
+				if (canvas.style.height === '') {
+					// If no explicit render height and style height, let's apply the aspect ratio,
+					// which one can be specified by the user but also by charts as default option
+					// (i.e. options.aspectRatio). If not specified, use canvas aspect ratio of 2.
+					canvas.height = canvas.width / (config.options.aspectRatio || 2);
+				} else {
+					var displayHeight = readUsedSize(canvas, 'height');
+					if (displayWidth !== undefined) {
+						canvas.height = displayHeight;
+					}
+				}
+			}
+
+			return canvas;
+		}
+
+		/**
+		 * Restores the canvas initial state, such as render/display sizes and style.
+		 * TODO(SB) Move this method in the upcoming core.platform class.
+		 */
+		function releaseCanvas(canvas) {
+			if (!canvas._chartjs) {
+				return;
+			}
+
+			var initial = canvas._chartjs.initial;
+			['height', 'width'].forEach(function(prop) {
+				var value = initial[prop];
+				if (value === undefined || value === null) {
+					canvas.removeAttribute(prop);
+				} else {
+					canvas.setAttribute(prop, value);
 				}
 			});
 
-			// Add the chart instance to the global namespace
-			Chart.instances[this.id] = this;
+			helpers.each(initial.style || {}, function(value, key) {
+				canvas.style[key] = value;
+			});
 
-			if (this.options.responsive) {
-				// Silent resize before chart draws
-				this.resize(true);
+			// The canvas render size might have been changed (and thus the state stack discarded),
+			// we can't use save() and restore() to restore the initial state. So make sure that at
+			// least the canvas context is reset to the default state by setting the canvas width.
+			// https://www.w3.org/TR/2011/WD-html5-20110525/the-canvas-element.html
+			canvas.width = canvas.width;
+
+			delete canvas._chartjs;
+		}
+
+		/**
+		 * TODO(SB) Move this method in the upcoming core.platform class.
+		 */
+		function acquireContext(item, config) {
+			if (typeof item === 'string') {
+				item = document.getElementById(item);
+			} else if (item.length) {
+				// Support for array based queries (such as jQuery)
+				item = item[0];
 			}
 
-			this.initialize();
+			if (item && item.canvas) {
+				// Support for any object associated to a canvas (including a context2d)
+				item = item.canvas;
+			}
 
-			return this;
+			if (item instanceof HTMLCanvasElement) {
+				// To prevent canvas fingerprinting, some add-ons undefine the getContext
+				// method, for example: https://github.com/kkapsner/CanvasBlocker
+				// https://github.com/chartjs/Chart.js/issues/2807
+				var context = item.getContext && item.getContext('2d');
+				if (context instanceof CanvasRenderingContext2D) {
+					initCanvas(item, config);
+					return context;
+				}
+			}
+
+			return null;
+		}
+
+		/**
+		 * Initializes the given config with global and chart default values.
+		 */
+		function initConfig(config) {
+			config = config || {};
+
+			// Do NOT use configMerge() for the data object because this method merges arrays
+			// and so would change references to labels and datasets, preventing data updates.
+			var data = config.data = config.data || {};
+			data.datasets = data.datasets || [];
+			data.labels = data.labels || [];
+
+			config.options = helpers.configMerge(
+				Chart.defaults.global,
+				Chart.defaults[config.type],
+				config.options || {});
+
+			return config;
+		}
+
+		/**
+		 * @class Chart.Controller
+		 * The main controller of a chart.
+		 */
+		Chart.Controller = function(item, config, instance) {
+			var me = this;
+
+			config = initConfig(config);
+
+			var context = acquireContext(item, config);
+			var canvas = context && context.canvas;
+			var height = canvas && canvas.height;
+			var width = canvas && canvas.width;
+
+			instance.ctx = context;
+			instance.canvas = canvas;
+			instance.config = config;
+			instance.width = width;
+			instance.height = height;
+			instance.aspectRatio = height? width / height : null;
+
+			me.id = helpers.uid();
+			me.chart = instance;
+			me.config = config;
+			me.options = config.options;
+			me._bufferedRender = false;
+
+			// Add the chart instance to the global namespace
+			Chart.instances[me.id] = me;
+
+			Object.defineProperty(me, 'data', {
+				get: function() {
+					return me.config.data;
+				}
+			});
+
+			if (!context || !canvas) {
+				// The given item is not a compatible context2d element, let's return before finalizing
+				// the chart initialization but after setting basic chart / controller properties that
+				// can help to figure out that the chart is not valid (e.g chart.canvas !== null);
+				// https://github.com/chartjs/Chart.js/issues/2807
+				console.error("Failed to create chart: can't acquire context from the given item");
+				return me;
+			}
+
+			helpers.retinaScale(instance);
+
+			// Responsiveness is currently based on the use of an iframe, however this method causes
+			// performance issues and could be troublesome when used with ad blockers. So make sure
+			// that the user is still able to create a chart without iframe when responsive is false.
+			// See https://github.com/chartjs/Chart.js/issues/2210
+			if (me.options.responsive) {
+				helpers.addResizeListener(canvas.parentNode, function() {
+					me.resize();
+				});
+
+				// Initial resize before chart draws (must be silent to preserve initial animations).
+				me.resize(true);
+			}
+
+			me.initialize();
+
+			return me;
 		};
 
 		helpers.extend(Chart.Controller.prototype, /** @lends Chart.Controller */ {
-
 			initialize: function() {
 				var me = this;
+
 				// Before init plugin notification
 				Chart.plugins.notify('beforeInit', [me]);
 
@@ -25710,7 +26103,7 @@
 			},
 
 			stop: function() {
-				// Stops any current animation loop occuring
+				// Stops any current animation loop occurring
 				Chart.animationService.cancelAnimation(this);
 				return this;
 			},
@@ -25718,19 +26111,23 @@
 			resize: function(silent) {
 				var me = this;
 				var chart = me.chart;
+				var options = me.options;
 				var canvas = chart.canvas;
-				var newWidth = helpers.getMaximumWidth(canvas);
-				var aspectRatio = chart.aspectRatio;
-				var newHeight = (me.options.maintainAspectRatio && isNaN(aspectRatio) === false && isFinite(aspectRatio) && aspectRatio !== 0) ? newWidth / aspectRatio : helpers.getMaximumHeight(canvas);
+				var aspectRatio = (options.maintainAspectRatio && chart.aspectRatio) || null;
 
-				var sizeChanged = chart.width !== newWidth || chart.height !== newHeight;
+				// the canvas render width and height will be casted to integers so make sure that
+				// the canvas display style uses the same integer values to avoid blurring effect.
+				var newWidth = Math.floor(helpers.getMaximumWidth(canvas));
+				var newHeight = Math.floor(aspectRatio? newWidth / aspectRatio : helpers.getMaximumHeight(canvas));
 
-				if (!sizeChanged) {
-					return me;
+				if (chart.width === newWidth && chart.height === newHeight) {
+					return;
 				}
 
 				canvas.width = chart.width = newWidth;
 				canvas.height = chart.height = newHeight;
+				canvas.style.width = newWidth + 'px';
+				canvas.style.height = newHeight + 'px';
 
 				helpers.retinaScale(chart);
 
@@ -25747,8 +26144,6 @@
 					me.stop();
 					me.update(me.options.responsiveAnimationDuration);
 				}
-
-				return me;
 			},
 
 			ensureScalesHaveIDs: function() {
@@ -25858,11 +26253,25 @@
 				return newControllers;
 			},
 
+			/**
+			 * Reset the elements of all datasets
+			 * @method resetElements
+			 * @private
+			 */
 			resetElements: function() {
 				var me = this;
 				helpers.each(me.data.datasets, function(dataset, datasetIndex) {
 					me.getDatasetMeta(datasetIndex).controller.reset();
 				}, me);
+			},
+
+			/**
+			* Resets the chart back to it's state before the initial animation
+			* @method reset
+			*/
+			reset: function() {
+				this.resetElements();
+				this.tooltip.initialize();
 			},
 
 			update: function(animationDuration, lazy) {
@@ -25882,7 +26291,7 @@
 
 				Chart.layoutService.update(me, me.chart.width, me.chart.height);
 
-				// Apply changes to the dataets that require the scales to have been calculated i.e BorderColor chages
+				// Apply changes to the datasets that require the scales to have been calculated i.e BorderColor changes
 				Chart.plugins.notify('afterScaleUpdate', [me]);
 
 				// Can only reset the new controllers after the scales have been updated
@@ -25895,7 +26304,14 @@
 				// Do this before render so that any plugins that need final scale updates can use it
 				Chart.plugins.notify('afterUpdate', [me]);
 
-				me.render(animationDuration, lazy);
+				if (me._bufferedRender) {
+					me._bufferedRequest = {
+						lazy: lazy,
+						duration: animationDuration
+					};
+				} else {
+					me.render(animationDuration, lazy);
+				}
 			},
 
 			/**
@@ -26007,125 +26423,28 @@
 			// Get the single element that was clicked on
 			// @return : An object containing the dataset index and element index of the matching element. Also contains the rectangle that was draw
 			getElementAtEvent: function(e) {
-				var me = this;
-				var eventPosition = helpers.getRelativePosition(e, me.chart);
-				var elementsArray = [];
-
-				helpers.each(me.data.datasets, function(dataset, datasetIndex) {
-					if (me.isDatasetVisible(datasetIndex)) {
-						var meta = me.getDatasetMeta(datasetIndex);
-						helpers.each(meta.data, function(element) {
-							if (element.inRange(eventPosition.x, eventPosition.y)) {
-								elementsArray.push(element);
-								return elementsArray;
-							}
-						});
-					}
-				});
-
-				return elementsArray.slice(0, 1);
+				return Chart.Interaction.modes.single(this, e);
 			},
 
 			getElementsAtEvent: function(e) {
-				var me = this;
-				var eventPosition = helpers.getRelativePosition(e, me.chart);
-				var elementsArray = [];
-
-				var found = function() {
-					if (me.data.datasets) {
-						for (var i = 0; i < me.data.datasets.length; i++) {
-							var meta = me.getDatasetMeta(i);
-							if (me.isDatasetVisible(i)) {
-								for (var j = 0; j < meta.data.length; j++) {
-									if (meta.data[j].inRange(eventPosition.x, eventPosition.y)) {
-										return meta.data[j];
-									}
-								}
-							}
-						}
-					}
-				}.call(me);
-
-				if (!found) {
-					return elementsArray;
-				}
-
-				helpers.each(me.data.datasets, function(dataset, datasetIndex) {
-					if (me.isDatasetVisible(datasetIndex)) {
-						var meta = me.getDatasetMeta(datasetIndex),
-							element = meta.data[found._index];
-						if (element && !element._view.skip) {
-							elementsArray.push(element);
-						}
-					}
-				}, me);
-
-				return elementsArray;
+				return Chart.Interaction.modes.label(this, e, {intersect: true});
 			},
 
 			getElementsAtXAxis: function(e) {
-				var me = this;
-				var eventPosition = helpers.getRelativePosition(e, me.chart);
-				var elementsArray = [];
-
-				var found = function() {
-					if (me.data.datasets) {
-						for (var i = 0; i < me.data.datasets.length; i++) {
-							var meta = me.getDatasetMeta(i);
-							if (me.isDatasetVisible(i)) {
-								for (var j = 0; j < meta.data.length; j++) {
-									if (meta.data[j].inLabelRange(eventPosition.x, eventPosition.y)) {
-										return meta.data[j];
-									}
-								}
-							}
-						}
-					}
-				}.call(me);
-
-				if (!found) {
-					return elementsArray;
-				}
-
-				helpers.each(me.data.datasets, function(dataset, datasetIndex) {
-					if (me.isDatasetVisible(datasetIndex)) {
-						var meta = me.getDatasetMeta(datasetIndex);
-						var index = helpers.findIndex(meta.data, function(it) {
-							return found._model.x === it._model.x;
-						});
-						if (index !== -1 && !meta.data[index]._view.skip) {
-							elementsArray.push(meta.data[index]);
-						}
-					}
-				}, me);
-
-				return elementsArray;
+				return Chart.Interaction.modes['x-axis'](this, e, {intersect: true});
 			},
 
-			getElementsAtEventForMode: function(e, mode) {
-				var me = this;
-				switch (mode) {
-				case 'single':
-					return me.getElementAtEvent(e);
-				case 'label':
-					return me.getElementsAtEvent(e);
-				case 'dataset':
-					return me.getDatasetAtEvent(e);
-				case 'x-axis':
-					return me.getElementsAtXAxis(e);
-				default:
-					return e;
+			getElementsAtEventForMode: function(e, mode, options) {
+				var method = Chart.Interaction.modes[mode];
+				if (typeof method === 'function') {
+					return method(this, e, options);
 				}
+
+				return [];
 			},
 
 			getDatasetAtEvent: function(e) {
-				var elementsArray = this.getElementAtEvent(e);
-
-				if (elementsArray.length > 0) {
-					elementsArray = this.getDatasetMeta(elementsArray[0]._datasetIndex).data;
-				}
-
-				return elementsArray;
+				return Chart.Interaction.modes.dataset(this, e);
 			},
 
 			getDatasetMeta: function(datasetIndex) {
@@ -26175,24 +26494,28 @@
 
 			destroy: function() {
 				var me = this;
-				me.stop();
-				me.clear();
-				helpers.unbindEvents(me, me.events);
-				helpers.removeResizeListener(me.chart.canvas.parentNode);
-
-				// Reset canvas height/width attributes
 				var canvas = me.chart.canvas;
-				canvas.width = me.chart.width;
-				canvas.height = me.chart.height;
+				var meta, i, ilen;
 
-				// if we scaled the canvas in response to a devicePixelRatio !== 1, we need to undo that transform here
-				if (me.chart.originalDevicePixelRatio !== undefined) {
-					me.chart.ctx.scale(1 / me.chart.originalDevicePixelRatio, 1 / me.chart.originalDevicePixelRatio);
+				me.stop();
+
+				// dataset controllers need to cleanup associated data
+				for (i = 0, ilen = me.data.datasets.length; i < ilen; ++i) {
+					meta = me.getDatasetMeta(i);
+					if (meta.controller) {
+						meta.controller.destroy();
+						meta.controller = null;
+					}
 				}
 
-				// Reset to the old style since it may have been changed by the device pixel ratio changes
-				canvas.style.width = me.chart.originalCanvasStyleWidth;
-				canvas.style.height = me.chart.originalCanvasStyleHeight;
+				if (canvas) {
+					helpers.unbindEvents(me, me.events);
+					helpers.removeResizeListener(canvas.parentNode);
+					helpers.clear(me.chart);
+					releaseCanvas(canvas);
+					me.chart.canvas = null;
+					me.chart.ctx = null;
+				}
 
 				Chart.plugins.notify('destroy', [me]);
 
@@ -26211,6 +26534,7 @@
 					_data: me.data,
 					_options: me.options.tooltips
 				}, me);
+				me.tooltip.initialize();
 			},
 
 			bindEvents: function() {
@@ -26224,20 +26548,6 @@
 				var method = enabled? 'setHoverStyle' : 'removeHoverStyle';
 				var element, i, ilen;
 
-				switch (mode) {
-				case 'single':
-					elements = [elements[0]];
-					break;
-				case 'label':
-				case 'dataset':
-				case 'x-axis':
-					// elements = elements;
-					break;
-				default:
-					// unsupported mode
-					return;
-				}
-
 				for (i=0, ilen=elements.length; i<ilen; ++i) {
 					element = elements[i];
 					if (element) {
@@ -26248,30 +26558,61 @@
 
 			eventHandler: function(e) {
 				var me = this;
+				var legend = me.legend;
 				var tooltip = me.tooltip;
+				var hoverOptions = me.options.hover;
+
+				// Buffer any update calls so that renders do not occur
+				me._bufferedRender = true;
+				me._bufferedRequest = null;
+
+				var changed = me.handleEvent(e);
+				changed |= legend && legend.handleEvent(e);
+				changed |= tooltip && tooltip.handleEvent(e);
+
+				var bufferedRequest = me._bufferedRequest;
+				if (bufferedRequest) {
+					// If we have an update that was triggered, we need to do a normal render
+					me.render(bufferedRequest.duration, bufferedRequest.lazy);
+				} else if (changed && !me.animating) {
+					// If entering, leaving, or changing elements, animate the change via pivot
+					me.stop();
+
+					// We only need to render at this point. Updating will cause scales to be
+					// recomputed generating flicker & using more memory than necessary.
+					me.render(hoverOptions.animationDuration, true);
+				}
+
+				me._bufferedRender = false;
+				me._bufferedRequest = null;
+
+				return me;
+			},
+
+			/**
+			 * Handle an event
+			 * @private
+			 * param e {Event} the event to handle
+			 * @return {Boolean} true if the chart needs to re-render
+			 */
+			handleEvent: function(e) {
+				var me = this;
 				var options = me.options || {};
 				var hoverOptions = options.hover;
-				var tooltipsOptions = options.tooltips;
+				var changed = false;
 
 				me.lastActive = me.lastActive || [];
-				me.lastTooltipActive = me.lastTooltipActive || [];
 
 				// Find Active Elements for hover and tooltips
 				if (e.type === 'mouseout') {
 					me.active = [];
-					me.tooltipActive = [];
 				} else {
-					me.active = me.getElementsAtEventForMode(e, hoverOptions.mode);
-					me.tooltipActive = me.getElementsAtEventForMode(e, tooltipsOptions.mode);
+					me.active = me.getElementsAtEventForMode(e, hoverOptions.mode, hoverOptions);
 				}
 
 				// On Hover hook
 				if (hoverOptions.onHover) {
 					hoverOptions.onHover.call(me, me.active);
-				}
-
-				if (me.legend && me.legend.handleEvent) {
-					me.legend.handleEvent(e);
 				}
 
 				if (e.type === 'mouseup' || e.type === 'click') {
@@ -26290,37 +26631,12 @@
 					me.updateHoverStyle(me.active, hoverOptions.mode, true);
 				}
 
-				// Built in Tooltips
-				if (tooltipsOptions.enabled || tooltipsOptions.custom) {
-					tooltip.initialize();
-					tooltip._active = me.tooltipActive;
-					tooltip.update(true);
-				}
-
-				// Hover animations
-				tooltip.pivot();
-
-				if (!me.animating) {
-					// If entering, leaving, or changing elements, animate the change via pivot
-					if (!helpers.arrayEquals(me.active, me.lastActive) ||
-						!helpers.arrayEquals(me.tooltipActive, me.lastTooltipActive)) {
-
-						me.stop();
-
-						if (tooltipsOptions.enabled || tooltipsOptions.custom) {
-							tooltip.update(true);
-						}
-
-						// We only need to render at this point. Updating will cause scales to be
-						// recomputed generating flicker & using more memory than necessary.
-						me.render(hoverOptions.animationDuration, true);
-					}
-				}
+				changed = !helpers.arrayEquals(me.active, me.lastActive);
 
 				// Remember Last Actives
 				me.lastActive = me.active;
-				me.lastTooltipActive = me.tooltipActive;
-				return me;
+
+				return changed;
 			}
 		});
 	};
@@ -26335,7 +26651,77 @@
 	module.exports = function(Chart) {
 
 		var helpers = Chart.helpers;
-		var noop = helpers.noop;
+
+		var arrayEvents = ['push', 'pop', 'shift', 'splice', 'unshift'];
+
+		/**
+		 * Hooks the array methods that add or remove values ('push', pop', 'shift', 'splice',
+		 * 'unshift') and notify the listener AFTER the array has been altered. Listeners are
+		 * called on the 'onData*' callbacks (e.g. onDataPush, etc.) with same arguments.
+		 */
+		function listenArrayEvents(array, listener) {
+			if (array._chartjs) {
+				array._chartjs.listeners.push(listener);
+				return;
+			}
+
+			Object.defineProperty(array, '_chartjs', {
+				configurable: true,
+				enumerable: false,
+				value: {
+					listeners: [listener]
+				}
+			});
+
+			arrayEvents.forEach(function(key) {
+				var method = 'onData' + key.charAt(0).toUpperCase() + key.slice(1);
+				var base = array[key];
+
+				Object.defineProperty(array, key, {
+					configurable: true,
+					enumerable: false,
+					value: function() {
+						var args = Array.prototype.slice.call(arguments);
+						var res = base.apply(this, args);
+
+						helpers.each(array._chartjs.listeners, function(object) {
+							if (typeof object[method] === 'function') {
+								object[method].apply(object, args);
+							}
+						});
+
+						return res;
+					}
+				});
+			});
+		}
+
+		/**
+		 * Removes the given array event listener and cleanup extra attached properties (such as
+		 * the _chartjs stub and overridden methods) if array doesn't have any more listeners.
+		 */
+		function unlistenArrayEvents(array, listener) {
+			var stub = array._chartjs;
+			if (!stub) {
+				return;
+			}
+
+			var listeners = stub.listeners;
+			var index = listeners.indexOf(listener);
+			if (index !== -1) {
+				listeners.splice(index, 1);
+			}
+
+			if (listeners.length > 0) {
+				return;
+			}
+
+			arrayEvents.forEach(function(key) {
+				delete array[key];
+			});
+
+			delete array._chartjs;
+		}
 
 		// Base class for all dataset controllers (line, bar, etc)
 		Chart.DatasetController = function(chart, datasetIndex) {
@@ -26397,6 +26783,15 @@
 				this.update(true);
 			},
 
+			/**
+			 * @private
+			 */
+			destroy: function() {
+				if (this._data) {
+					unlistenArrayEvents(this._data, this);
+				}
+			},
+
 			createMetaDataset: function() {
 				var me = this;
 				var type = me.datasetElementType;
@@ -26424,45 +26819,50 @@
 				var i, ilen;
 
 				for (i=0, ilen=data.length; i<ilen; ++i) {
-					metaData[i] = metaData[i] || me.createMetaData(meta, i);
+					metaData[i] = metaData[i] || me.createMetaData(i);
 				}
 
 				meta.dataset = meta.dataset || me.createMetaDataset();
 			},
 
 			addElementAndReset: function(index) {
-				var me = this;
-				var element = me.createMetaData(index);
-				me.getMeta().data.splice(index, 0, element);
-				me.updateElement(element, index, true);
+				var element = this.createMetaData(index);
+				this.getMeta().data.splice(index, 0, element);
+				this.updateElement(element, index, true);
 			},
 
 			buildOrUpdateElements: function() {
-				// Handle the number of data points changing
-				var meta = this.getMeta(),
-					md = meta.data,
-					numData = this.getDataset().data.length,
-					numMetaData = md.length;
+				var me = this;
+				var dataset = me.getDataset();
+				var data = dataset.data || (dataset.data = []);
 
-				// Make sure that we handle number of datapoints changing
-				if (numData < numMetaData) {
-					// Remove excess bars for data points that have been removed
-					md.splice(numData, numMetaData - numData);
-				} else if (numData > numMetaData) {
-					// Add new elements
-					for (var index = numMetaData; index < numData; ++index) {
-						this.addElementAndReset(index);
+				// In order to correctly handle data addition/deletion animation (an thus simulate
+				// real-time charts), we need to monitor these data modifications and synchronize
+				// the internal meta data accordingly.
+				if (me._data !== data) {
+					if (me._data) {
+						// This case happens when the user replaced the data array instance.
+						unlistenArrayEvents(me._data, me);
 					}
+
+					listenArrayEvents(data, me);
+					me._data = data;
 				}
+
+				// Re-sync meta data in case the user replaced the data array or if we missed
+				// any updates and so make sure that we handle number of datapoints changing.
+				me.resyncElements();
 			},
 
-			update: noop,
+			update: helpers.noop,
 
 			draw: function(ease) {
 				var easingDecimal = ease || 1;
-				helpers.each(this.getMeta().data, function(element) {
-					element.transition(easingDecimal).draw();
-				});
+				var i, len;
+				var metaData = this.getMeta().data;
+				for (i = 0, len = metaData.length; i < len; ++i) {
+					metaData[i].transition(easingDecimal).draw();
+				}
 			},
 
 			removeHoverStyle: function(element, elementOpts) {
@@ -26488,8 +26888,69 @@
 				model.backgroundColor = custom.hoverBackgroundColor ? custom.hoverBackgroundColor : valueOrDefault(dataset.hoverBackgroundColor, index, getHoverColor(model.backgroundColor));
 				model.borderColor = custom.hoverBorderColor ? custom.hoverBorderColor : valueOrDefault(dataset.hoverBorderColor, index, getHoverColor(model.borderColor));
 				model.borderWidth = custom.hoverBorderWidth ? custom.hoverBorderWidth : valueOrDefault(dataset.hoverBorderWidth, index, model.borderWidth);
-			}
+			},
 
+			/**
+			 * @private
+			 */
+			resyncElements: function() {
+				var me = this;
+				var meta = me.getMeta();
+				var data = me.getDataset().data;
+				var numMeta = meta.data.length;
+				var numData = data.length;
+
+				if (numData < numMeta) {
+					meta.data.splice(numData, numMeta - numData);
+				} else if (numData > numMeta) {
+					me.insertElements(numMeta, numData - numMeta);
+				}
+			},
+
+			/**
+			 * @private
+			 */
+			insertElements: function(start, count) {
+				for (var i=0; i<count; ++i) {
+					this.addElementAndReset(start + i);
+				}
+			},
+
+			/**
+			 * @private
+			 */
+			onDataPush: function() {
+				this.insertElements(this.getDataset().data.length-1, arguments.length);
+			},
+
+			/**
+			 * @private
+			 */
+			onDataPop: function() {
+				this.getMeta().data.pop();
+			},
+
+			/**
+			 * @private
+			 */
+			onDataShift: function() {
+				this.getMeta().data.shift();
+			},
+
+			/**
+			 * @private
+			 */
+			onDataSplice: function(start, count) {
+				this.getMeta().data.splice(start, count);
+				this.insertElements(start, arguments.length - 2);
+			},
+
+			/**
+			 * @private
+			 */
+			onDataUnshift: function() {
+				this.insertElements(0, arguments.length);
+			}
 		});
 
 		Chart.DatasetController.extend = helpers.inherits;
@@ -26534,8 +26995,26 @@
 					return;
 				}
 
-				var xPadding = 0;
-				var yPadding = 0;
+				var layoutOptions = chartInstance.options.layout;
+				var padding = layoutOptions ? layoutOptions.padding : null;
+
+				var leftPadding = 0;
+				var rightPadding = 0;
+				var topPadding = 0;
+				var bottomPadding = 0;
+
+				if (!isNaN(padding)) {
+					// options.layout.padding is a number. assign to all
+					leftPadding = padding;
+					rightPadding = padding;
+					topPadding = padding;
+					bottomPadding = padding;
+				} else {
+					leftPadding = padding.left || 0;
+					rightPadding = padding.right || 0;
+					topPadding = padding.top || 0;
+					bottomPadding = padding.bottom || 0;
+				}
 
 				var leftBoxes = helpers.where(chartInstance.boxes, function(box) {
 					return box.options.position === 'left';
@@ -26601,8 +27080,8 @@
 				// 9. Tell any axes that overlay the chart area the positions of the chart area
 
 				// Step 1
-				var chartWidth = width - (2 * xPadding);
-				var chartHeight = height - (2 * yPadding);
+				var chartWidth = width - leftPadding - rightPadding;
+				var chartHeight = height - topPadding - bottomPadding;
 				var chartAreaWidth = chartWidth / 2; // min 50%
 				var chartAreaHeight = chartHeight / 2; // min 50%
 
@@ -26642,10 +27121,10 @@
 				// be if the axes are drawn at their minimum sizes.
 
 				// Steps 5 & 6
-				var totalLeftBoxesWidth = xPadding;
-				var totalRightBoxesWidth = xPadding;
-				var totalTopBoxesHeight = yPadding;
-				var totalBottomBoxesHeight = yPadding;
+				var totalLeftBoxesWidth = leftPadding;
+				var totalRightBoxesWidth = rightPadding;
+				var totalTopBoxesHeight = topPadding;
+				var totalBottomBoxesHeight = bottomPadding;
 
 				// Function to fit a box
 				function fitBox(box) {
@@ -26715,10 +27194,10 @@
 				helpers.each(leftBoxes.concat(rightBoxes), finalFitVerticalBox);
 
 				// Recalculate because the size of each layout might have changed slightly due to the margins (label rotation for instance)
-				totalLeftBoxesWidth = xPadding;
-				totalRightBoxesWidth = xPadding;
-				totalTopBoxesHeight = yPadding;
-				totalBottomBoxesHeight = yPadding;
+				totalLeftBoxesWidth = leftPadding;
+				totalRightBoxesWidth = rightPadding;
+				totalTopBoxesHeight = topPadding;
+				totalBottomBoxesHeight = bottomPadding;
 
 				helpers.each(leftBoxes, function(box) {
 					totalLeftBoxesWidth += box.width;
@@ -26767,13 +27246,13 @@
 				}
 
 				// Step 7 - Position the boxes
-				var left = xPadding;
-				var top = yPadding;
+				var left = leftPadding;
+				var top = topPadding;
 
 				function placeBox(box) {
 					if (box.isHorizontal()) {
-						box.left = box.options.fullWidth ? xPadding : totalLeftBoxesWidth;
-						box.right = box.options.fullWidth ? width - xPadding : totalLeftBoxesWidth + maxChartAreaWidth;
+						box.left = box.options.fullWidth ? leftPadding : totalLeftBoxesWidth;
+						box.right = box.options.fullWidth ? width - rightPadding : totalLeftBoxesWidth + maxChartAreaWidth;
 						box.top = top;
 						box.bottom = top + box.height;
 
@@ -26915,7 +27394,7 @@
 			},
 
 			/**
-			 * Remove all registered p^lugins.
+			 * Remove all registered plugins.
 			 * @since 2.1.5
 			 */
 			clear: function() {
@@ -26932,7 +27411,7 @@
 			},
 
 			/**
-			 * Returns all registered plugin intances.
+			 * Returns all registered plugin instances.
 			 * @returns {Array} array of plugin objects.
 			 * @since 2.1.5
 			 */
@@ -27014,6 +27493,214 @@
 
 		var helpers = Chart.helpers;
 
+		/**
+		 * Namespace to hold static tick generation functions
+		 * @namespace Chart.Ticks
+		 */
+		Chart.Ticks = {
+			/**
+			 * Namespace to hold generators for different types of ticks
+			 * @namespace Chart.Ticks.generators
+			 */
+			generators: {
+				/**
+				 * Interface for the options provided to the numeric tick generator
+				 * @interface INumericTickGenerationOptions
+				 */
+				/**
+				 * The maximum number of ticks to display
+				 * @name INumericTickGenerationOptions#maxTicks
+				 * @type Number
+				 */
+				/**
+				 * The distance between each tick.
+				 * @name INumericTickGenerationOptions#stepSize
+				 * @type Number
+				 * @optional
+				 */
+				/**
+				 * Forced minimum for the ticks. If not specified, the minimum of the data range is used to calculate the tick minimum
+				 * @name INumericTickGenerationOptions#min
+				 * @type Number
+				 * @optional
+				 */
+				/**
+				 * The maximum value of the ticks. If not specified, the maximum of the data range is used to calculate the tick maximum
+				 * @name INumericTickGenerationOptions#max
+				 * @type Number
+				 * @optional
+				 */
+
+				/**
+				 * Generate a set of linear ticks
+				 * @method Chart.Ticks.generators.linear
+				 * @param generationOptions {INumericTickGenerationOptions} the options used to generate the ticks
+				 * @param dataRange {IRange} the range of the data
+				 * @returns {Array<Number>} array of tick values
+				 */
+				linear: function(generationOptions, dataRange) {
+					var ticks = [];
+					// To get a "nice" value for the tick spacing, we will use the appropriately named
+					// "nice number" algorithm. See http://stackoverflow.com/questions/8506881/nice-label-algorithm-for-charts-with-minimum-ticks
+					// for details.
+
+					var spacing;
+					if (generationOptions.stepSize && generationOptions.stepSize > 0) {
+						spacing = generationOptions.stepSize;
+					} else {
+						var niceRange = helpers.niceNum(dataRange.max - dataRange.min, false);
+						spacing = helpers.niceNum(niceRange / (generationOptions.maxTicks - 1), true);
+					}
+					var niceMin = Math.floor(dataRange.min / spacing) * spacing;
+					var niceMax = Math.ceil(dataRange.max / spacing) * spacing;
+
+					// If min, max and stepSize is set and they make an evenly spaced scale use it.
+					if (generationOptions.min && generationOptions.max && generationOptions.stepSize) {
+						var minMaxDeltaDivisibleByStepSize = ((generationOptions.max - generationOptions.min) % generationOptions.stepSize) === 0;
+						if (minMaxDeltaDivisibleByStepSize) {
+							niceMin = generationOptions.min;
+							niceMax = generationOptions.max;
+						}
+					}
+
+					var numSpaces = (niceMax - niceMin) / spacing;
+					// If very close to our rounded value, use it.
+					if (helpers.almostEquals(numSpaces, Math.round(numSpaces), spacing / 1000)) {
+						numSpaces = Math.round(numSpaces);
+					} else {
+						numSpaces = Math.ceil(numSpaces);
+					}
+
+					// Put the values into the ticks array
+					ticks.push(generationOptions.min !== undefined ? generationOptions.min : niceMin);
+					for (var j = 1; j < numSpaces; ++j) {
+						ticks.push(niceMin + (j * spacing));
+					}
+					ticks.push(generationOptions.max !== undefined ? generationOptions.max : niceMax);
+
+					return ticks;
+				},
+
+				/**
+				 * Generate a set of logarithmic ticks
+				 * @method Chart.Ticks.generators.logarithmic
+				 * @param generationOptions {INumericTickGenerationOptions} the options used to generate the ticks
+				 * @param dataRange {IRange} the range of the data
+				 * @returns {Array<Number>} array of tick values
+				 */
+				logarithmic: function(generationOptions, dataRange) {
+					var ticks = [];
+					var getValueOrDefault = helpers.getValueOrDefault;
+
+					// Figure out what the max number of ticks we can support it is based on the size of
+					// the axis area. For now, we say that the minimum tick spacing in pixels must be 50
+					// We also limit the maximum number of ticks to 11 which gives a nice 10 squares on
+					// the graph
+					var tickVal = getValueOrDefault(generationOptions.min, Math.pow(10, Math.floor(helpers.log10(dataRange.min))));
+
+					while (tickVal < dataRange.max) {
+						ticks.push(tickVal);
+
+						var exp;
+						var significand;
+
+						if (tickVal === 0) {
+							exp = Math.floor(helpers.log10(dataRange.minNotZero));
+							significand = Math.round(dataRange.minNotZero / Math.pow(10, exp));
+						} else {
+							exp = Math.floor(helpers.log10(tickVal));
+							significand = Math.floor(tickVal / Math.pow(10, exp)) + 1;
+						}
+
+						if (significand === 10) {
+							significand = 1;
+							++exp;
+						}
+
+						tickVal = significand * Math.pow(10, exp);
+					}
+
+					var lastTick = getValueOrDefault(generationOptions.max, tickVal);
+					ticks.push(lastTick);
+
+					return ticks;
+				}
+			},
+
+			/**
+			 * Namespace to hold formatters for different types of ticks
+			 * @namespace Chart.Ticks.formatters
+			 */
+			formatters: {
+				/**
+				 * Formatter for value labels
+				 * @method Chart.Ticks.formatters.values
+				 * @param value the value to display
+				 * @return {String|Array} the label to display
+				 */
+				values: function(value) {
+					return helpers.isArray(value) ? value : '' + value;
+				},
+
+				/**
+				 * Formatter for linear numeric ticks
+				 * @method Chart.Ticks.formatters.linear
+				 * @param tickValue {Number} the value to be formatted
+				 * @param index {Number} the position of the tickValue parameter in the ticks array
+				 * @param ticks {Array<Number>} the list of ticks being converted
+				 * @return {String} string representation of the tickValue parameter
+				 */
+				linear: function(tickValue, index, ticks) {
+					// If we have lots of ticks, don't use the ones
+					var delta = ticks.length > 3 ? ticks[2] - ticks[1] : ticks[1] - ticks[0];
+
+					// If we have a number like 2.5 as the delta, figure out how many decimal places we need
+					if (Math.abs(delta) > 1) {
+						if (tickValue !== Math.floor(tickValue)) {
+							// not an integer
+							delta = tickValue - Math.floor(tickValue);
+						}
+					}
+
+					var logDelta = helpers.log10(Math.abs(delta));
+					var tickString = '';
+
+					if (tickValue !== 0) {
+						var numDecimal = -1 * Math.floor(logDelta);
+						numDecimal = Math.max(Math.min(numDecimal, 20), 0); // toFixed has a max of 20 decimal places
+						tickString = tickValue.toFixed(numDecimal);
+					} else {
+						tickString = '0'; // never show decimal places for 0
+					}
+
+					return tickString;
+				},
+
+				logarithmic: function(tickValue, index, ticks) {
+					var remain = tickValue / (Math.pow(10, Math.floor(helpers.log10(tickValue))));
+
+					if (tickValue === 0) {
+						return '0';
+					} else if (remain === 1 || remain === 2 || remain === 5 || index === 0 || index === ticks.length - 1) {
+						return tickValue.toExponential();
+					}
+					return '';
+				}
+			}
+		};
+	};
+
+
+/***/ },
+/* 201 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	module.exports = function(Chart) {
+
+		var helpers = Chart.helpers;
+
 		Chart.defaults.scale = {
 			display: true,
 			position: 'left',
@@ -27056,15 +27743,13 @@
 				autoSkipPadding: 0,
 				labelOffset: 0,
 				// We pass through arrays to be rendered as multiline labels, we convert Others to strings here.
-				callback: function(value) {
-					return helpers.isArray(value) ? value : '' + value;
-				}
+				callback: Chart.Ticks.formatters.values
 			}
 		};
 
 		Chart.Scale = Chart.Element.extend({
 
-			// These methods are ordered by lifecyle. Utilities then follow.
+			// These methods are ordered by lifecycle. Utilities then follow.
 			// Any function defined here is inherited by all scale types.
 			// Any function can be extended by the scale type
 
@@ -27179,13 +27864,8 @@
 			convertTicksToLabels: function() {
 				var me = this;
 				// Convert ticks to strings
-				me.ticks = me.ticks.map(function(numericalTick, index, ticks) {
-					if (me.options.ticks.userCallback) {
-						return me.options.ticks.userCallback(numericalTick, index, ticks);
-					}
-					return me.options.ticks.callback(numericalTick, index, ticks);
-				},
-				me);
+				var tickOpts = me.options.ticks;
+				me.ticks = me.ticks.map(tickOpts.userCallback || tickOpts.callback);
 			},
 			afterTickToLabelConversion: function() {
 				helpers.callCallback(this.options.afterTickToLabelConversion, [this]);
@@ -27408,8 +28088,8 @@
 				if (rawValue === null || typeof(rawValue) === 'undefined') {
 					return NaN;
 				}
-				// isNaN(object) returns true, so make sure NaN is checking for a number
-				if (typeof(rawValue) === 'number' && isNaN(rawValue)) {
+				// isNaN(object) returns true, so make sure NaN is checking for a number; Discard Infinite values
+				if (typeof(rawValue) === 'number' && !isFinite(rawValue)) {
 					return NaN;
 				}
 				// If it is in fact an object, dive in one more level
@@ -27480,7 +28160,7 @@
 					0);
 			},
 
-			// Actualy draw the scale on the canvas
+			// Actually draw the scale on the canvas
 			// @param {rectangle} chartArea : the area of the chart to draw full grid lines on
 			draw: function(chartArea) {
 				var me = this;
@@ -27769,7 +28449,7 @@
 
 
 /***/ },
-/* 201 */
+/* 202 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -27802,7 +28482,7 @@
 				me.legendHitBoxes = [];
 			},
 
-			// These methods are ordered by lifecyle. Utilities then follow.
+			// These methods are ordered by lifecycle. Utilities then follow.
 
 			beforeUpdate: function() {
 				var chartOpts = this.chart.options;
@@ -27913,7 +28593,7 @@
 				return pos === 'top' || pos === 'bottom';
 			},
 
-			// Actualy draw the title block on the canvas
+			// Actually draw the title block on the canvas
 			draw: function() {
 				var me = this,
 					ctx = me.ctx,
@@ -27932,7 +28612,8 @@
 						top = me.top,
 						left = me.left,
 						bottom = me.bottom,
-						right = me.right;
+						right = me.right,
+						maxWidth;
 
 					ctx.fillStyle = valueOrDefault(opts.fontColor, globalDefaults.defaultFontColor); // render in correct colour
 					ctx.font = titleFont;
@@ -27941,9 +28622,11 @@
 					if (me.isHorizontal()) {
 						titleX = left + ((right - left) / 2); // midpoint of the width
 						titleY = top + ((bottom - top) / 2); // midpoint of the height
+						maxWidth = right - left;
 					} else {
 						titleX = opts.position === 'left' ? left + (fontSize / 2) : right - (fontSize / 2);
 						titleY = top + ((bottom - top) / 2);
+						maxWidth = bottom - top;
 						rotation = Math.PI * (opts.position === 'left' ? -0.5 : 0.5);
 					}
 
@@ -27952,7 +28635,7 @@
 					ctx.rotate(rotation);
 					ctx.textAlign = 'center';
 					ctx.textBaseline = 'middle';
-					ctx.fillText(opts.text, 0, 0);
+					ctx.fillText(opts.text, 0, 0, maxWidth);
 					ctx.restore();
 				}
 			}
@@ -27979,7 +28662,7 @@
 
 
 /***/ },
-/* 202 */
+/* 203 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28048,6 +28731,18 @@
 			}
 		};
 
+		/**
+		 * Helper function to get the box width based on the usePointStyle option
+		 * @param labelopts {Object} the label options on the legend
+		 * @param fontSize {Number} the label font size
+		 * @return {Number} width of the color box area
+		 */
+		function getBoxWidth(labelOpts, fontSize) {
+			return labelOpts.usePointStyle ?
+				fontSize * Math.SQRT2 :
+				labelOpts.boxWidth;
+		}
+
 		Chart.Legend = Chart.Element.extend({
 
 			initialize: function(config) {
@@ -28060,7 +28755,7 @@
 				this.doughnutMode = false;
 			},
 
-			// These methods are ordered by lifecyle. Utilities then follow.
+			// These methods are ordered by lifecycle. Utilities then follow.
 			// Any function defined here is inherited by all legend types.
 			// Any function can be extended by the legend type
 
@@ -28188,11 +28883,9 @@
 						ctx.textBaseline = 'top';
 
 						helpers.each(me.legendItems, function(legendItem, i) {
-							var boxWidth = labelOpts.usePointStyle ?
-								fontSize * Math.sqrt(2) :
-								labelOpts.boxWidth;
-
+							var boxWidth = getBoxWidth(labelOpts, fontSize);
 							var width = boxWidth + (fontSize / 2) + ctx.measureText(legendItem.text).width;
+
 							if (lineWidths[lineWidths.length - 1] + width + labelOpts.padding >= me.width) {
 								totalHeight += fontSize + (labelOpts.padding);
 								lineWidths[lineWidths.length] = me.left;
@@ -28220,10 +28913,7 @@
 						var itemHeight = fontSize + vPadding;
 
 						helpers.each(me.legendItems, function(legendItem, i) {
-							// If usePointStyle is set, multiple boxWidth by 2 since it represents
-							// the radius and not truly the width
-							var boxWidth = labelOpts.usePointStyle ? 2 * labelOpts.boxWidth : labelOpts.boxWidth;
-
+							var boxWidth = getBoxWidth(labelOpts, fontSize);
 							var itemWidth = boxWidth + (fontSize / 2) + ctx.measureText(legendItem.text).width;
 
 							// If too tall, go to new column
@@ -28264,7 +28954,7 @@
 				return this.options.position === 'top' || this.options.position === 'bottom';
 			},
 
-			// Actualy draw the legend on the canvas
+			// Actually draw the legend on the canvas
 			draw: function() {
 				var me = this;
 				var opts = me.options;
@@ -28292,7 +28982,7 @@
 					ctx.fillStyle = fontColor; // render in correct colour
 					ctx.font = labelFont;
 
-					var boxWidth = labelOpts.boxWidth,
+					var boxWidth = getBoxWidth(labelOpts, fontSize),
 						hitboxes = me.legendHitBoxes;
 
 					// current position
@@ -28318,7 +29008,7 @@
 						}
 
 						if (opts.labels && opts.labels.usePointStyle) {
-							// Recalulate x and y for drawPoint() because its expecting
+							// Recalculate x and y for drawPoint() because its expecting
 							// x and y to be center of figure (instead of top left)
 							var radius = fontSize * Math.SQRT2 / 2;
 							var offSet = radius / Math.SQRT2;
@@ -28369,9 +29059,7 @@
 					var itemHeight = fontSize + labelOpts.padding;
 					helpers.each(me.legendItems, function(legendItem, i) {
 						var textWidth = ctx.measureText(legendItem.text).width,
-							width = labelOpts.usePointStyle ?
-								fontSize + (fontSize / 2) + textWidth :
-								boxWidth + (fontSize / 2) + textWidth,
+							width = boxWidth + (fontSize / 2) + textWidth,
 							x = cursor.x,
 							y = cursor.y;
 
@@ -28405,11 +29093,17 @@
 				}
 			},
 
-			// Handle an event
+			/**
+			 * Handle an event
+			 * @private
+			 * @param e {Event} the event to handle
+			 * @return {Boolean} true if a change occured
+			 */
 			handleEvent: function(e) {
 				var me = this;
 				var opts = me.options;
 				var type = e.type === 'mouseup' ? 'click' : e.type;
+				var changed = false;
 
 				if (type === 'mousemove') {
 					if (!opts.onHover) {
@@ -28437,14 +29131,18 @@
 							// Touching an element
 							if (type === 'click') {
 								opts.onClick.call(me, e, me.legendItems[i]);
+								changed = true;
 								break;
 							} else if (type === 'mousemove') {
 								opts.onHover.call(me, e, me.legendItems[i]);
+								changed = true;
 								break;
 							}
 						}
 					}
 				}
+
+				return changed;
 			}
 		});
 
@@ -28469,7 +29167,308 @@
 
 
 /***/ },
-/* 203 */
+/* 204 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	module.exports = function(Chart) {
+		var helpers = Chart.helpers;
+
+		/**
+		 * Helper function to traverse all of the visible elements in the chart
+		 * @param chart {chart} the chart
+		 * @param handler {Function} the callback to execute for each visible item
+		 */
+		function parseVisibleItems(chart, handler) {
+			var datasets = chart.data.datasets;
+			var meta, i, j, ilen, jlen;
+
+			for (i = 0, ilen = datasets.length; i < ilen; ++i) {
+				if (!chart.isDatasetVisible(i)) {
+					continue;
+				}
+
+				meta = chart.getDatasetMeta(i);
+				for (j = 0, jlen = meta.data.length; j < jlen; ++j) {
+					var element = meta.data[j];
+					if (!element._view.skip) {
+						handler(element);
+					}
+				}
+			}
+		}
+
+		/**
+		 * Helper function to get the items that intersect the event position
+		 * @param items {ChartElement[]} elements to filter
+		 * @param position {Point} the point to be nearest to
+		 * @return {ChartElement[]} the nearest items
+		 */
+		function getIntersectItems(chart, position) {
+			var elements = [];
+
+			parseVisibleItems(chart, function(element) {
+				if (element.inRange(position.x, position.y)) {
+					elements.push(element);
+				}
+			});
+
+			return elements;
+		}
+
+		/**
+		 * Helper function to get the items nearest to the event position considering all visible items in teh chart
+		 * @param chart {Chart} the chart to look at elements from
+		 * @param position {Point} the point to be nearest to
+		 * @param intersect {Boolean} if true, only consider items that intersect the position
+		 * @param distanceMetric {Function} Optional function to provide the distance between
+		 * @return {ChartElement[]} the nearest items
+		 */
+		function getNearestItems(chart, position, intersect, distanceMetric) {
+			var minDistance = Number.POSITIVE_INFINITY;
+			var nearestItems = [];
+
+			if (!distanceMetric) {
+				distanceMetric = helpers.distanceBetweenPoints;
+			}
+
+			parseVisibleItems(chart, function(element) {
+				if (intersect && !element.inRange(position.x, position.y)) {
+					return;
+				}
+
+				var center = element.getCenterPoint();
+				var distance = distanceMetric(position, center);
+
+				if (distance < minDistance) {
+					nearestItems = [element];
+					minDistance = distance;
+				} else if (distance === minDistance) {
+					// Can have multiple items at the same distance in which case we sort by size
+					nearestItems.push(element);
+				}
+			});
+
+			return nearestItems;
+		}
+
+		function indexMode(chart, e, options) {
+			var position = helpers.getRelativePosition(e, chart.chart);
+			var distanceMetric = function(pt1, pt2) {
+				return Math.abs(pt1.x - pt2.x);
+			};
+			var items = options.intersect ? getIntersectItems(chart, position) : getNearestItems(chart, position, false, distanceMetric);
+			var elements = [];
+
+			if (!items.length) {
+				return [];
+			}
+
+			chart.data.datasets.forEach(function(dataset, datasetIndex) {
+				if (chart.isDatasetVisible(datasetIndex)) {
+					var meta = chart.getDatasetMeta(datasetIndex),
+						element = meta.data[items[0]._index];
+
+					// don't count items that are skipped (null data)
+					if (element && !element._view.skip) {
+						elements.push(element);
+					}
+				}
+			});
+
+			return elements;
+		}
+
+		/**
+		 * @interface IInteractionOptions
+		 */
+		/**
+		 * If true, only consider items that intersect the point
+		 * @name IInterfaceOptions#boolean
+		 * @type Boolean
+		 */
+
+		/**
+		 * @namespace Chart.Interaction
+		 * Contains interaction related functions
+		 */
+		Chart.Interaction = {
+			// Helper function for different modes
+			modes: {
+				single: function(chart, e) {
+					var position = helpers.getRelativePosition(e, chart.chart);
+					var elements = [];
+
+					parseVisibleItems(chart, function(element) {
+						if (element.inRange(position.x, position.y)) {
+							elements.push(element);
+							return elements;
+						}
+					});
+
+					return elements.slice(0, 1);
+				},
+
+				/**
+				 * @function Chart.Interaction.modes.label
+				 * @deprecated since version 2.4.0
+				 */
+				label: indexMode,
+
+				/**
+				 * Returns items at the same index. If the options.intersect parameter is true, we only return items if we intersect something
+				 * If the options.intersect mode is false, we find the nearest item and return the items at the same index as that item
+				 * @function Chart.Interaction.modes.index
+				 * @since v2.4.0
+				 * @param chart {chart} the chart we are returning items from
+				 * @param e {Event} the event we are find things at
+				 * @param options {IInteractionOptions} options to use during interaction
+				 * @return {Chart.Element[]} Array of elements that are under the point. If none are found, an empty array is returned
+				 */
+				index: indexMode,
+
+				/**
+				 * Returns items in the same dataset. If the options.intersect parameter is true, we only return items if we intersect something
+				 * If the options.intersect is false, we find the nearest item and return the items in that dataset
+				 * @function Chart.Interaction.modes.dataset
+				 * @param chart {chart} the chart we are returning items from
+				 * @param e {Event} the event we are find things at
+				 * @param options {IInteractionOptions} options to use during interaction
+				 * @return {Chart.Element[]} Array of elements that are under the point. If none are found, an empty array is returned
+				 */
+				dataset: function(chart, e, options) {
+					var position = helpers.getRelativePosition(e, chart.chart);
+					var items = options.intersect ? getIntersectItems(chart, position) : getNearestItems(chart, position, false);
+
+					if (items.length > 0) {
+						items = chart.getDatasetMeta(items[0]._datasetIndex).data;
+					}
+
+					return items;
+				},
+
+				/**
+				 * @function Chart.Interaction.modes.x-axis
+				 * @deprecated since version 2.4.0. Use index mode and intersect == true
+				 */
+				'x-axis': function(chart, e) {
+					return indexMode(chart, e, true);
+				},
+
+				/**
+				 * Point mode returns all elements that hit test based on the event position
+				 * of the event
+				 * @function Chart.Interaction.modes.intersect
+				 * @param chart {chart} the chart we are returning items from
+				 * @param e {Event} the event we are find things at
+				 * @return {Chart.Element[]} Array of elements that are under the point. If none are found, an empty array is returned
+				 */
+				point: function(chart, e) {
+					var position = helpers.getRelativePosition(e, chart.chart);
+					return getIntersectItems(chart, position);
+				},
+
+				/**
+				 * nearest mode returns the element closest to the point
+				 * @function Chart.Interaction.modes.intersect
+				 * @param chart {chart} the chart we are returning items from
+				 * @param e {Event} the event we are find things at
+				 * @param options {IInteractionOptions} options to use
+				 * @return {Chart.Element[]} Array of elements that are under the point. If none are found, an empty array is returned
+				 */
+				nearest: function(chart, e, options) {
+					var position = helpers.getRelativePosition(e, chart.chart);
+					var nearestItems = getNearestItems(chart, position, options.intersect);
+
+					// We have multiple items at the same distance from the event. Now sort by smallest
+					if (nearestItems.length > 1) {
+						nearestItems.sort(function(a, b) {
+							var sizeA = a.getArea();
+							var sizeB = b.getArea();
+							var ret = sizeA - sizeB;
+
+							if (ret === 0) {
+								// if equal sort by dataset index
+								ret = a._datasetIndex - b._datasetIndex;
+							}
+
+							return ret;
+						});
+					}
+
+					// Return only 1 item
+					return nearestItems.slice(0, 1);
+				},
+
+				/**
+				 * x mode returns the elements that hit-test at the current x coordinate
+				 * @function Chart.Interaction.modes.x
+				 * @param chart {chart} the chart we are returning items from
+				 * @param e {Event} the event we are find things at
+				 * @param options {IInteractionOptions} options to use
+				 * @return {Chart.Element[]} Array of elements that are under the point. If none are found, an empty array is returned
+				 */
+				x: function(chart, e, options) {
+					var position = helpers.getRelativePosition(e, chart.chart);
+					var items = [];
+					var intersectsItem = false;
+
+					parseVisibleItems(chart, function(element) {
+						if (element.inXRange(position.x)) {
+							items.push(element);
+						}
+
+						if (element.inRange(position.x, position.y)) {
+							intersectsItem = true;
+						}
+					});
+
+					// If we want to trigger on an intersect and we don't have any items
+					// that intersect the position, return nothing
+					if (options.intersect && !intersectsItem) {
+						items = [];
+					}
+					return items;
+				},
+
+				/**
+				 * y mode returns the elements that hit-test at the current y coordinate
+				 * @function Chart.Interaction.modes.y
+				 * @param chart {chart} the chart we are returning items from
+				 * @param e {Event} the event we are find things at
+				 * @param options {IInteractionOptions} options to use
+				 * @return {Chart.Element[]} Array of elements that are under the point. If none are found, an empty array is returned
+				 */
+				y: function(chart, e, options) {
+					var position = helpers.getRelativePosition(e, chart.chart);
+					var items = [];
+					var intersectsItem = false;
+
+					parseVisibleItems(chart, function(element) {
+						if (element.inYRange(position.y)) {
+							items.push(element);
+						}
+
+						if (element.inRange(position.x, position.y)) {
+							intersectsItem = true;
+						}
+					});
+
+					// If we want to trigger on an intersect and we don't have any items
+					// that intersect the position, return nothing
+					if (options.intersect && !intersectsItem) {
+						items = [];
+					}
+					return items;
+				}
+			}
+		};
+	};
+
+
+/***/ },
+/* 205 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -28478,10 +29477,20 @@
 
 		var helpers = Chart.helpers;
 
+		/**
+	 	 * Helper method to merge the opacity into a color
+	 	 */
+		function mergeOpacity(colorString, opacity) {
+			var color = helpers.color(colorString);
+			return color.alpha(opacity * color.alpha()).rgbaString();
+		}
+
 		Chart.defaults.global.tooltips = {
 			enabled: true,
 			custom: null,
-			mode: 'single',
+			mode: 'nearest',
+			position: 'average',
+			intersect: true,
 			backgroundColor: 'rgba(0,0,0,0.8)',
 			titleFontStyle: 'bold',
 			titleSpacing: 2,
@@ -28498,11 +29507,10 @@
 			footerAlign: 'left',
 			yPadding: 6,
 			xPadding: 6,
-			yAlign: 'center',
-			xAlign: 'center',
 			caretSize: 5,
 			cornerRadius: 6,
 			multiKeyBackground: '#fff',
+			displayColors: true,
 			callbacks: {
 				// Args are: (tooltipItems, data)
 				beforeTitle: helpers.noop,
@@ -28570,40 +29578,7 @@
 			return base;
 		}
 
-		function getAveragePosition(elements) {
-			if (!elements.length) {
-				return false;
-			}
-
-			var i, len;
-			var xPositions = [];
-			var yPositions = [];
-
-			for (i = 0, len = elements.length; i < len; ++i) {
-				var el = elements[i];
-				if (el && el.hasValue()) {
-					var pos = el.tooltipPosition();
-					xPositions.push(pos.x);
-					yPositions.push(pos.y);
-				}
-			}
-
-			var x = 0,
-				y = 0;
-			for (i = 0; i < xPositions.length; ++i) {
-				if (xPositions[i]) {
-					x += xPositions[i];
-					y += yPositions[i];
-				}
-			}
-
-			return {
-				x: Math.round(x / xPositions.length),
-				y: Math.round(y / xPositions.length)
-			};
-		}
-
-		// Private helper to create a tooltip iteam model
+		// Private helper to create a tooltip item model
 		// @param element : the chart element (point, arc, bar) to create the tooltip item for
 		// @return : new tooltip item
 		function createTooltipItem(element) {
@@ -28616,59 +29591,255 @@
 				xLabel: xScale ? xScale.getLabelForIndex(index, datasetIndex) : '',
 				yLabel: yScale ? yScale.getLabelForIndex(index, datasetIndex) : '',
 				index: index,
-				datasetIndex: datasetIndex
+				datasetIndex: datasetIndex,
+				x: element._model.x,
+				y: element._model.y
+			};
+		}
+
+		/**
+		 * Helper to get the reset model for the tooltip
+		 * @param tooltipOpts {Object} the tooltip options
+		 */
+		function getBaseModel(tooltipOpts) {
+			var globalDefaults = Chart.defaults.global;
+			var getValueOrDefault = helpers.getValueOrDefault;
+
+			return {
+				// Positioning
+				xPadding: tooltipOpts.xPadding,
+				yPadding: tooltipOpts.yPadding,
+				xAlign: tooltipOpts.xAlign,
+				yAlign: tooltipOpts.yAlign,
+
+				// Body
+				bodyFontColor: tooltipOpts.bodyFontColor,
+				_bodyFontFamily: getValueOrDefault(tooltipOpts.bodyFontFamily, globalDefaults.defaultFontFamily),
+				_bodyFontStyle: getValueOrDefault(tooltipOpts.bodyFontStyle, globalDefaults.defaultFontStyle),
+				_bodyAlign: tooltipOpts.bodyAlign,
+				bodyFontSize: getValueOrDefault(tooltipOpts.bodyFontSize, globalDefaults.defaultFontSize),
+				bodySpacing: tooltipOpts.bodySpacing,
+
+				// Title
+				titleFontColor: tooltipOpts.titleFontColor,
+				_titleFontFamily: getValueOrDefault(tooltipOpts.titleFontFamily, globalDefaults.defaultFontFamily),
+				_titleFontStyle: getValueOrDefault(tooltipOpts.titleFontStyle, globalDefaults.defaultFontStyle),
+				titleFontSize: getValueOrDefault(tooltipOpts.titleFontSize, globalDefaults.defaultFontSize),
+				_titleAlign: tooltipOpts.titleAlign,
+				titleSpacing: tooltipOpts.titleSpacing,
+				titleMarginBottom: tooltipOpts.titleMarginBottom,
+
+				// Footer
+				footerFontColor: tooltipOpts.footerFontColor,
+				_footerFontFamily: getValueOrDefault(tooltipOpts.footerFontFamily, globalDefaults.defaultFontFamily),
+				_footerFontStyle: getValueOrDefault(tooltipOpts.footerFontStyle, globalDefaults.defaultFontStyle),
+				footerFontSize: getValueOrDefault(tooltipOpts.footerFontSize, globalDefaults.defaultFontSize),
+				_footerAlign: tooltipOpts.footerAlign,
+				footerSpacing: tooltipOpts.footerSpacing,
+				footerMarginTop: tooltipOpts.footerMarginTop,
+
+				// Appearance
+				caretSize: tooltipOpts.caretSize,
+				cornerRadius: tooltipOpts.cornerRadius,
+				backgroundColor: tooltipOpts.backgroundColor,
+				opacity: 0,
+				legendColorBackground: tooltipOpts.multiKeyBackground,
+				displayColors: tooltipOpts.displayColors
+			};
+		}
+
+		/**
+		 * Get the size of the tooltip
+		 */
+		function getTooltipSize(tooltip, model) {
+			var ctx = tooltip._chart.ctx;
+
+			var height = model.yPadding * 2; // Tooltip Padding
+			var width = 0;
+
+			// Count of all lines in the body
+			var body = model.body;
+			var combinedBodyLength = body.reduce(function(count, bodyItem) {
+				return count + bodyItem.before.length + bodyItem.lines.length + bodyItem.after.length;
+			}, 0);
+			combinedBodyLength += model.beforeBody.length + model.afterBody.length;
+
+			var titleLineCount = model.title.length;
+			var footerLineCount = model.footer.length;
+			var titleFontSize = model.titleFontSize,
+				bodyFontSize = model.bodyFontSize,
+				footerFontSize = model.footerFontSize;
+
+			height += titleLineCount * titleFontSize; // Title Lines
+			height += titleLineCount ? (titleLineCount - 1) * model.titleSpacing : 0; // Title Line Spacing
+			height += titleLineCount ? model.titleMarginBottom : 0; // Title's bottom Margin
+			height += combinedBodyLength * bodyFontSize; // Body Lines
+			height += combinedBodyLength ? (combinedBodyLength - 1) * model.bodySpacing : 0; // Body Line Spacing
+			height += footerLineCount ? model.footerMarginTop : 0; // Footer Margin
+			height += footerLineCount * (footerFontSize); // Footer Lines
+			height += footerLineCount ? (footerLineCount - 1) * model.footerSpacing : 0; // Footer Line Spacing
+
+			// Title width
+			var widthPadding = 0;
+			var maxLineWidth = function(line) {
+				width = Math.max(width, ctx.measureText(line).width + widthPadding);
+			};
+
+			ctx.font = helpers.fontString(titleFontSize, model._titleFontStyle, model._titleFontFamily);
+			helpers.each(model.title, maxLineWidth);
+
+			// Body width
+			ctx.font = helpers.fontString(bodyFontSize, model._bodyFontStyle, model._bodyFontFamily);
+			helpers.each(model.beforeBody.concat(model.afterBody), maxLineWidth);
+
+			// Body lines may include some extra width due to the color box
+			widthPadding = model.displayColors ? (bodyFontSize + 2) : 0;
+			helpers.each(body, function(bodyItem) {
+				helpers.each(bodyItem.before, maxLineWidth);
+				helpers.each(bodyItem.lines, maxLineWidth);
+				helpers.each(bodyItem.after, maxLineWidth);
+			});
+
+			// Reset back to 0
+			widthPadding = 0;
+
+			// Footer width
+			ctx.font = helpers.fontString(footerFontSize, model._footerFontStyle, model._footerFontFamily);
+			helpers.each(model.footer, maxLineWidth);
+
+			// Add padding
+			width += 2 * model.xPadding;
+
+			return {
+				width: width,
+				height: height
+			};
+		}
+
+		/**
+		 * Helper to get the alignment of a tooltip given the size
+		 */
+		function determineAlignment(tooltip, size) {
+			var model = tooltip._model;
+			var chart = tooltip._chart;
+			var chartArea = tooltip._chartInstance.chartArea;
+			var xAlign = 'center';
+			var yAlign = 'center';
+
+			if (model.y < size.height) {
+				yAlign = 'top';
+			} else if (model.y > (chart.height - size.height)) {
+				yAlign = 'bottom';
+			}
+
+			var lf, rf; // functions to determine left, right alignment
+			var olf, orf; // functions to determine if left/right alignment causes tooltip to go outside chart
+			var yf; // function to get the y alignment if the tooltip goes outside of the left or right edges
+			var midX = (chartArea.left + chartArea.right) / 2;
+			var midY = (chartArea.top + chartArea.bottom) / 2;
+
+			if (yAlign === 'center') {
+				lf = function(x) {
+					return x <= midX;
+				};
+				rf = function(x) {
+					return x > midX;
+				};
+			} else {
+				lf = function(x) {
+					return x <= (size.width / 2);
+				};
+				rf = function(x) {
+					return x >= (chart.width - (size.width / 2));
+				};
+			}
+
+			olf = function(x) {
+				return x + size.width > chart.width;
+			};
+			orf = function(x) {
+				return x - size.width < 0;
+			};
+			yf = function(y) {
+				return y <= midY ? 'top' : 'bottom';
+			};
+
+			if (lf(model.x)) {
+				xAlign = 'left';
+
+				// Is tooltip too wide and goes over the right side of the chart.?
+				if (olf(model.x)) {
+					xAlign = 'center';
+					yAlign = yf(model.y);
+				}
+			} else if (rf(model.x)) {
+				xAlign = 'right';
+
+				// Is tooltip too wide and goes outside left edge of canvas?
+				if (orf(model.x)) {
+					xAlign = 'center';
+					yAlign = yf(model.y);
+				}
+			}
+
+			var opts = tooltip._options;
+			return {
+				xAlign: opts.xAlign ? opts.xAlign : xAlign,
+				yAlign: opts.yAlign ? opts.yAlign : yAlign
+			};
+		}
+
+		/**
+		 * @Helper to get the location a tooltip needs to be placed at given the initial position (via the vm) and the size and alignment
+		 */
+		function getBackgroundPoint(vm, size, alignment) {
+			// Background Position
+			var x = vm.x;
+			var y = vm.y;
+
+			var caretSize = vm.caretSize,
+				caretPadding = vm.caretPadding,
+				cornerRadius = vm.cornerRadius,
+				xAlign = alignment.xAlign,
+				yAlign = alignment.yAlign,
+				paddingAndSize = caretSize + caretPadding,
+				radiusAndPadding = cornerRadius + caretPadding;
+
+			if (xAlign === 'right') {
+				x -= size.width;
+			} else if (xAlign === 'center') {
+				x -= (size.width / 2);
+			}
+
+			if (yAlign === 'top') {
+				y += paddingAndSize;
+			} else if (yAlign === 'bottom') {
+				y -= size.height + paddingAndSize;
+			} else {
+				y -= (size.height / 2);
+			}
+
+			if (yAlign === 'center') {
+				if (xAlign === 'left') {
+					x += paddingAndSize;
+				} else if (xAlign === 'right') {
+					x -= paddingAndSize;
+				}
+			} else if (xAlign === 'left') {
+				x -= radiusAndPadding;
+			} else if (xAlign === 'right') {
+				x += radiusAndPadding;
+			}
+
+			return {
+				x: x,
+				y: y
 			};
 		}
 
 		Chart.Tooltip = Chart.Element.extend({
 			initialize: function() {
-				var me = this;
-				var globalDefaults = Chart.defaults.global;
-				var tooltipOpts = me._options;
-				var getValueOrDefault = helpers.getValueOrDefault;
-
-				helpers.extend(me, {
-					_model: {
-						// Positioning
-						xPadding: tooltipOpts.xPadding,
-						yPadding: tooltipOpts.yPadding,
-						xAlign: tooltipOpts.xAlign,
-						yAlign: tooltipOpts.yAlign,
-
-						// Body
-						bodyFontColor: tooltipOpts.bodyFontColor,
-						_bodyFontFamily: getValueOrDefault(tooltipOpts.bodyFontFamily, globalDefaults.defaultFontFamily),
-						_bodyFontStyle: getValueOrDefault(tooltipOpts.bodyFontStyle, globalDefaults.defaultFontStyle),
-						_bodyAlign: tooltipOpts.bodyAlign,
-						bodyFontSize: getValueOrDefault(tooltipOpts.bodyFontSize, globalDefaults.defaultFontSize),
-						bodySpacing: tooltipOpts.bodySpacing,
-
-						// Title
-						titleFontColor: tooltipOpts.titleFontColor,
-						_titleFontFamily: getValueOrDefault(tooltipOpts.titleFontFamily, globalDefaults.defaultFontFamily),
-						_titleFontStyle: getValueOrDefault(tooltipOpts.titleFontStyle, globalDefaults.defaultFontStyle),
-						titleFontSize: getValueOrDefault(tooltipOpts.titleFontSize, globalDefaults.defaultFontSize),
-						_titleAlign: tooltipOpts.titleAlign,
-						titleSpacing: tooltipOpts.titleSpacing,
-						titleMarginBottom: tooltipOpts.titleMarginBottom,
-
-						// Footer
-						footerFontColor: tooltipOpts.footerFontColor,
-						_footerFontFamily: getValueOrDefault(tooltipOpts.footerFontFamily, globalDefaults.defaultFontFamily),
-						_footerFontStyle: getValueOrDefault(tooltipOpts.footerFontStyle, globalDefaults.defaultFontStyle),
-						footerFontSize: getValueOrDefault(tooltipOpts.footerFontSize, globalDefaults.defaultFontSize),
-						_footerAlign: tooltipOpts.footerAlign,
-						footerSpacing: tooltipOpts.footerSpacing,
-						footerMarginTop: tooltipOpts.footerMarginTop,
-
-						// Appearance
-						caretSize: tooltipOpts.caretSize,
-						cornerRadius: tooltipOpts.cornerRadius,
-						backgroundColor: tooltipOpts.backgroundColor,
-						opacity: 0,
-						legendColorBackground: tooltipOpts.multiKeyBackground
-					}
-				});
+				this._model = getBaseModel(this._options);
 			},
 
 			// Get the title
@@ -28745,23 +29916,53 @@
 			update: function(changed) {
 				var me = this;
 				var opts = me._options;
-				var model = me._model;
+
+				// Need to regenerate the model because its faster than using extend and it is necessary due to the optimization in Chart.Element.transition
+				// that does _view = _model if ease === 1. This causes the 2nd tooltip update to set properties in both the view and model at the same time
+				// which breaks any animations.
+				var existingModel = me._model;
+				var model = me._model = getBaseModel(opts);
 				var active = me._active;
 
 				var data = me._data;
 				var chartInstance = me._chartInstance;
+
+				// In the case where active.length === 0 we need to keep these at existing values for good animations
+				var alignment = {
+					xAlign: existingModel.xAlign,
+					yAlign: existingModel.yAlign
+				};
+				var backgroundPoint = {
+					x: existingModel.x,
+					y: existingModel.y
+				};
+				var tooltipSize = {
+					width: existingModel.width,
+					height: existingModel.height
+				};
+				var tooltipPosition = {
+					x: existingModel.caretX,
+					y: existingModel.caretY
+				};
 
 				var i, len;
 
 				if (active.length) {
 					model.opacity = 1;
 
-					var labelColors = [],
-						tooltipPosition = getAveragePosition(active);
+					var labelColors = [];
+					tooltipPosition = Chart.Tooltip.positioners[opts.position](active, me._eventPosition);
 
 					var tooltipItems = [];
 					for (i = 0, len = active.length; i < len; ++i) {
 						tooltipItems.push(createTooltipItem(active[i]));
+					}
+
+					// If the user provided a filter function, use it to modify the tooltip items
+					if (opts.filter) {
+						tooltipItems = tooltipItems.filter(function(a) {
+							return opts.filter(a, data);
+						});
 					}
 
 					// If the user provided a sorting function, use it to modify the tooltip items
@@ -28771,208 +29972,54 @@
 						});
 					}
 
-					// If there is more than one item, show color items
-					if (active.length > 1) {
-						helpers.each(tooltipItems, function(tooltipItem) {
-							labelColors.push(opts.callbacks.labelColor.call(me, tooltipItem, chartInstance));
-						});
-					}
-
-					// Build the Text Lines
-					helpers.extend(model, {
-						title: me.getTitle(tooltipItems, data),
-						beforeBody: me.getBeforeBody(tooltipItems, data),
-						body: me.getBody(tooltipItems, data),
-						afterBody: me.getAfterBody(tooltipItems, data),
-						footer: me.getFooter(tooltipItems, data),
-						x: Math.round(tooltipPosition.x),
-						y: Math.round(tooltipPosition.y),
-						caretPadding: helpers.getValueOrDefault(tooltipPosition.padding, 2),
-						labelColors: labelColors
+					// Determine colors for boxes
+					helpers.each(tooltipItems, function(tooltipItem) {
+						labelColors.push(opts.callbacks.labelColor.call(me, tooltipItem, chartInstance));
 					});
 
-					// We need to determine alignment of
-					var tooltipSize = me.getTooltipSize(model);
-					me.determineAlignment(tooltipSize); // Smart Tooltip placement to stay on the canvas
+					// Build the Text Lines
+					model.title = me.getTitle(tooltipItems, data);
+					model.beforeBody = me.getBeforeBody(tooltipItems, data);
+					model.body = me.getBody(tooltipItems, data);
+					model.afterBody = me.getAfterBody(tooltipItems, data);
+					model.footer = me.getFooter(tooltipItems, data);
 
-					helpers.extend(model, me.getBackgroundPoint(model, tooltipSize));
+					// Initial positioning and colors
+					model.x = Math.round(tooltipPosition.x);
+					model.y = Math.round(tooltipPosition.y);
+					model.caretPadding = helpers.getValueOrDefault(tooltipPosition.padding, 2);
+					model.labelColors = labelColors;
+
+					// data points
+					model.dataPoints = tooltipItems;
+
+					// We need to determine alignment of the tooltip
+					tooltipSize = getTooltipSize(this, model);
+					alignment = determineAlignment(this, tooltipSize);
+					// Final Size and Position
+					backgroundPoint = getBackgroundPoint(model, tooltipSize, alignment);
 				} else {
-					me._model.opacity = 0;
+					model.opacity = 0;
 				}
+
+				model.xAlign = alignment.xAlign;
+				model.yAlign = alignment.yAlign;
+				model.x = backgroundPoint.x;
+				model.y = backgroundPoint.y;
+				model.width = tooltipSize.width;
+				model.height = tooltipSize.height;
+
+				// Point where the caret on the tooltip points to
+				model.caretX = tooltipPosition.x;
+				model.caretY = tooltipPosition.y;
+
+				me._model = model;
 
 				if (changed && opts.custom) {
 					opts.custom.call(me, model);
 				}
 
 				return me;
-			},
-			getTooltipSize: function(vm) {
-				var ctx = this._chart.ctx;
-
-				var size = {
-					height: vm.yPadding * 2, // Tooltip Padding
-					width: 0
-				};
-
-				// Count of all lines in the body
-				var body = vm.body;
-				var combinedBodyLength = body.reduce(function(count, bodyItem) {
-					return count + bodyItem.before.length + bodyItem.lines.length + bodyItem.after.length;
-				}, 0);
-				combinedBodyLength += vm.beforeBody.length + vm.afterBody.length;
-
-				var titleLineCount = vm.title.length;
-				var footerLineCount = vm.footer.length;
-				var titleFontSize = vm.titleFontSize,
-					bodyFontSize = vm.bodyFontSize,
-					footerFontSize = vm.footerFontSize;
-
-				size.height += titleLineCount * titleFontSize; // Title Lines
-				size.height += (titleLineCount - 1) * vm.titleSpacing; // Title Line Spacing
-				size.height += titleLineCount ? vm.titleMarginBottom : 0; // Title's bottom Margin
-				size.height += combinedBodyLength * bodyFontSize; // Body Lines
-				size.height += combinedBodyLength ? (combinedBodyLength - 1) * vm.bodySpacing : 0; // Body Line Spacing
-				size.height += footerLineCount ? vm.footerMarginTop : 0; // Footer Margin
-				size.height += footerLineCount * (footerFontSize); // Footer Lines
-				size.height += footerLineCount ? (footerLineCount - 1) * vm.footerSpacing : 0; // Footer Line Spacing
-
-				// Title width
-				var widthPadding = 0;
-				var maxLineWidth = function(line) {
-					size.width = Math.max(size.width, ctx.measureText(line).width + widthPadding);
-				};
-
-				ctx.font = helpers.fontString(titleFontSize, vm._titleFontStyle, vm._titleFontFamily);
-				helpers.each(vm.title, maxLineWidth);
-
-				// Body width
-				ctx.font = helpers.fontString(bodyFontSize, vm._bodyFontStyle, vm._bodyFontFamily);
-				helpers.each(vm.beforeBody.concat(vm.afterBody), maxLineWidth);
-
-				// Body lines may include some extra width due to the color box
-				widthPadding = body.length > 1 ? (bodyFontSize + 2) : 0;
-				helpers.each(body, function(bodyItem) {
-					helpers.each(bodyItem.before, maxLineWidth);
-					helpers.each(bodyItem.lines, maxLineWidth);
-					helpers.each(bodyItem.after, maxLineWidth);
-				});
-
-				// Reset back to 0
-				widthPadding = 0;
-
-				// Footer width
-				ctx.font = helpers.fontString(footerFontSize, vm._footerFontStyle, vm._footerFontFamily);
-				helpers.each(vm.footer, maxLineWidth);
-
-				// Add padding
-				size.width += 2 * vm.xPadding;
-
-				return size;
-			},
-			determineAlignment: function(size) {
-				var me = this;
-				var model = me._model;
-				var chart = me._chart;
-				var chartArea = me._chartInstance.chartArea;
-
-				if (model.y < size.height) {
-					model.yAlign = 'top';
-				} else if (model.y > (chart.height - size.height)) {
-					model.yAlign = 'bottom';
-				}
-
-				var lf, rf; // functions to determine left, right alignment
-				var olf, orf; // functions to determine if left/right alignment causes tooltip to go outside chart
-				var yf; // function to get the y alignment if the tooltip goes outside of the left or right edges
-				var midX = (chartArea.left + chartArea.right) / 2;
-				var midY = (chartArea.top + chartArea.bottom) / 2;
-
-				if (model.yAlign === 'center') {
-					lf = function(x) {
-						return x <= midX;
-					};
-					rf = function(x) {
-						return x > midX;
-					};
-				} else {
-					lf = function(x) {
-						return x <= (size.width / 2);
-					};
-					rf = function(x) {
-						return x >= (chart.width - (size.width / 2));
-					};
-				}
-
-				olf = function(x) {
-					return x + size.width > chart.width;
-				};
-				orf = function(x) {
-					return x - size.width < 0;
-				};
-				yf = function(y) {
-					return y <= midY ? 'top' : 'bottom';
-				};
-
-				if (lf(model.x)) {
-					model.xAlign = 'left';
-
-					// Is tooltip too wide and goes over the right side of the chart.?
-					if (olf(model.x)) {
-						model.xAlign = 'center';
-						model.yAlign = yf(model.y);
-					}
-				} else if (rf(model.x)) {
-					model.xAlign = 'right';
-
-					// Is tooltip too wide and goes outside left edge of canvas?
-					if (orf(model.x)) {
-						model.xAlign = 'center';
-						model.yAlign = yf(model.y);
-					}
-				}
-			},
-			getBackgroundPoint: function(vm, size) {
-				// Background Position
-				var pt = {
-					x: vm.x,
-					y: vm.y
-				};
-
-				var caretSize = vm.caretSize,
-					caretPadding = vm.caretPadding,
-					cornerRadius = vm.cornerRadius,
-					xAlign = vm.xAlign,
-					yAlign = vm.yAlign,
-					paddingAndSize = caretSize + caretPadding,
-					radiusAndPadding = cornerRadius + caretPadding;
-
-				if (xAlign === 'right') {
-					pt.x -= size.width;
-				} else if (xAlign === 'center') {
-					pt.x -= (size.width / 2);
-				}
-
-				if (yAlign === 'top') {
-					pt.y += paddingAndSize;
-				} else if (yAlign === 'bottom') {
-					pt.y -= size.height + paddingAndSize;
-				} else {
-					pt.y -= (size.height / 2);
-				}
-
-				if (yAlign === 'center') {
-					if (xAlign === 'left') {
-						pt.x += paddingAndSize;
-					} else if (xAlign === 'right') {
-						pt.x -= paddingAndSize;
-					}
-				} else if (xAlign === 'left') {
-					pt.x -= radiusAndPadding;
-				} else if (xAlign === 'right') {
-					pt.x += radiusAndPadding;
-				}
-
-				return pt;
 			},
 			drawCaret: function(tooltipPoint, size, opacity) {
 				var vm = this._view;
@@ -29029,8 +30076,7 @@
 					}
 				}
 
-				var bgColor = helpers.color(vm.backgroundColor);
-				ctx.fillStyle = bgColor.alpha(opacity * bgColor.alpha()).rgbString();
+				ctx.fillStyle = mergeOpacity(vm.backgroundColor, opacity);
 				ctx.beginPath();
 				ctx.moveTo(x1, y1);
 				ctx.lineTo(x2, y2);
@@ -29048,8 +30094,7 @@
 					var titleFontSize = vm.titleFontSize,
 						titleSpacing = vm.titleSpacing;
 
-					var titleFontColor = helpers.color(vm.titleFontColor);
-					ctx.fillStyle = titleFontColor.alpha(opacity * titleFontColor.alpha()).rgbString();
+					ctx.fillStyle = mergeOpacity(vm.titleFontColor, opacity);
 					ctx.font = helpers.fontString(titleFontSize, vm._titleFontStyle, vm._titleFontFamily);
 
 					var i, len;
@@ -29071,8 +30116,7 @@
 				ctx.textAlign = vm._bodyAlign;
 				ctx.textBaseline = 'top';
 
-				var bodyFontColor = helpers.color(vm.bodyFontColor);
-				var textColor = bodyFontColor.alpha(opacity * bodyFontColor.alpha()).rgbString();
+				var textColor = mergeOpacity(vm.bodyFontColor, opacity);
 				ctx.fillStyle = textColor;
 				ctx.font = helpers.fontString(bodyFontSize, vm._bodyFontStyle, vm._bodyFontFamily);
 
@@ -29086,7 +30130,7 @@
 				// Before body lines
 				helpers.each(vm.beforeBody, fillLineOfText);
 
-				var drawColorBoxes = body.length > 1;
+				var drawColorBoxes = vm.displayColors;
 				xLinePadding = drawColorBoxes ? (bodyFontSize + 2) : 0;
 
 				// Draw body lines now
@@ -29097,15 +30141,15 @@
 						// Draw Legend-like boxes if needed
 						if (drawColorBoxes) {
 							// Fill a white rect so that colours merge nicely if the opacity is < 1
-							ctx.fillStyle = helpers.color(vm.legendColorBackground).alpha(opacity).rgbaString();
+							ctx.fillStyle = mergeOpacity(vm.legendColorBackground, opacity);
 							ctx.fillRect(pt.x, pt.y, bodyFontSize, bodyFontSize);
 
 							// Border
-							ctx.strokeStyle = helpers.color(vm.labelColors[i].borderColor).alpha(opacity).rgbaString();
+							ctx.strokeStyle = mergeOpacity(vm.labelColors[i].borderColor, opacity);
 							ctx.strokeRect(pt.x, pt.y, bodyFontSize, bodyFontSize);
 
 							// Inner square
-							ctx.fillStyle = helpers.color(vm.labelColors[i].backgroundColor).alpha(opacity).rgbaString();
+							ctx.fillStyle = mergeOpacity(vm.labelColors[i].backgroundColor, opacity);
 							ctx.fillRect(pt.x + 1, pt.y + 1, bodyFontSize - 2, bodyFontSize - 2);
 
 							ctx.fillStyle = textColor;
@@ -29133,8 +30177,7 @@
 					ctx.textAlign = vm._footerAlign;
 					ctx.textBaseline = 'top';
 
-					var footerFontColor = helpers.color(vm.footerFontColor);
-					ctx.fillStyle = footerFontColor.alpha(opacity * footerFontColor.alpha()).rgbString();
+					ctx.fillStyle = mergeOpacity(vm.footerFontColor, opacity);
 					ctx.font = helpers.fontString(vm.footerFontSize, vm._footerFontStyle, vm._footerFontFamily);
 
 					helpers.each(footer, function(line) {
@@ -29142,6 +30185,11 @@
 						pt.y += vm.footerFontSize + vm.footerSpacing;
 					});
 				}
+			},
+			drawBackground: function(pt, vm, ctx, tooltipSize, opacity) {
+				ctx.fillStyle = mergeOpacity(vm.backgroundColor, opacity);
+				helpers.drawRoundedRectangle(ctx, pt.x, pt.y, tooltipSize.width, tooltipSize.height, vm.cornerRadius);
+				ctx.fill();
 			},
 			draw: function() {
 				var ctx = this._chart.ctx;
@@ -29151,7 +30199,10 @@
 					return;
 				}
 
-				var tooltipSize = this.getTooltipSize(vm);
+				var tooltipSize = {
+					width: vm.width,
+					height: vm.height
+				};
 				var pt = {
 					x: vm.x,
 					y: vm.y
@@ -29162,10 +30213,7 @@
 
 				if (this._options.enabled) {
 					// Draw Background
-					var bgColor = helpers.color(vm.backgroundColor);
-					ctx.fillStyle = bgColor.alpha(opacity * bgColor.alpha()).rgbString();
-					helpers.drawRoundedRectangle(ctx, pt.x, pt.y, tooltipSize.width, tooltipSize.height, vm.cornerRadius);
-					ctx.fill();
+					this.drawBackground(pt, vm, ctx, tooltipSize, opacity);
 
 					// Draw Caret
 					this.drawCaret(pt, tooltipSize, opacity);
@@ -29183,13 +30231,127 @@
 					// Footer
 					this.drawFooter(pt, vm, ctx, opacity);
 				}
+			},
+
+			/**
+			 * Handle an event
+			 * @private
+			 * @param e {Event} the event to handle
+			 * @returns {Boolean} true if the tooltip changed
+			 */
+			handleEvent: function(e) {
+				var me = this;
+				var options = me._options;
+				var changed = false;
+
+				me._lastActive = me._lastActive || [];
+
+				// Find Active Elements for tooltips
+				if (e.type === 'mouseout') {
+					me._active = [];
+				} else {
+					me._active = me._chartInstance.getElementsAtEventForMode(e, options.mode, options);
+				}
+
+				// Remember Last Actives
+				changed = !helpers.arrayEquals(me._active, me._lastActive);
+				me._lastActive = me._active;
+
+				if (options.enabled || options.custom) {
+					me._eventPosition = helpers.getRelativePosition(e, me._chart);
+
+					var model = me._model;
+					me.update(true);
+					me.pivot();
+
+					// See if our tooltip position changed
+					changed |= (model.x !== me._model.x) || (model.y !== me._model.y);
+				}
+
+				return changed;
 			}
 		});
+
+		/**
+		 * @namespace Chart.Tooltip.positioners
+		 */
+		Chart.Tooltip.positioners = {
+			/**
+			 * Average mode places the tooltip at the average position of the elements shown
+			 * @function Chart.Tooltip.positioners.average
+			 * @param elements {ChartElement[]} the elements being displayed in the tooltip
+			 * @returns {Point} tooltip position
+			 */
+			average: function(elements) {
+				if (!elements.length) {
+					return false;
+				}
+
+				var i, len;
+				var x = 0;
+				var y = 0;
+				var count = 0;
+
+				for (i = 0, len = elements.length; i < len; ++i) {
+					var el = elements[i];
+					if (el && el.hasValue()) {
+						var pos = el.tooltipPosition();
+						x += pos.x;
+						y += pos.y;
+						++count;
+					}
+				}
+
+				return {
+					x: Math.round(x / count),
+					y: Math.round(y / count)
+				};
+			},
+
+			/**
+			 * Gets the tooltip position nearest of the item nearest to the event position
+			 * @function Chart.Tooltip.positioners.nearest
+			 * @param elements {Chart.Element[]} the tooltip elements
+			 * @param eventPosition {Point} the position of the event in canvas coordinates
+			 * @returns {Point} the tooltip position
+			 */
+			nearest: function(elements, eventPosition) {
+				var x = eventPosition.x;
+				var y = eventPosition.y;
+
+				var nearestElement;
+				var minDistance = Number.POSITIVE_INFINITY;
+				var i, len;
+				for (i = 0, len = elements.length; i < len; ++i) {
+					var el = elements[i];
+					if (el && el.hasValue()) {
+						var center = el.getCenterPoint();
+						var d = helpers.distanceBetweenPoints(eventPosition, center);
+
+						if (d < minDistance) {
+							minDistance = d;
+							nearestElement = el;
+						}
+					}
+				}
+
+				if (nearestElement) {
+					var tp = nearestElement.tooltipPosition();
+					x = tp.x;
+					y = tp.y;
+				}
+
+				return {
+					x: x,
+					y: y
+				};
+			}
+		};
 	};
 
 
 /***/ },
-/* 204 */
+/* 206 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29246,6 +30408,19 @@
 				}
 				return false;
 			},
+			getCenterPoint: function() {
+				var vm = this._view;
+				var halfAngle = (vm.startAngle + vm.endAngle) / 2;
+				var halfRadius = (vm.innerRadius + vm.outerRadius) / 2;
+				return {
+					x: vm.x + Math.cos(halfAngle) * halfRadius,
+					y: vm.y + Math.sin(halfAngle) * halfRadius
+				};
+			},
+			getArea: function() {
+				var vm = this._view;
+				return Math.PI * ((vm.endAngle - vm.startAngle) / (2 * Math.PI)) * (Math.pow(vm.outerRadius, 2) - Math.pow(vm.innerRadius, 2));
+			},
 			tooltipPosition: function() {
 				var vm = this._view;
 
@@ -29286,7 +30461,7 @@
 
 
 /***/ },
-/* 205 */
+/* 207 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29306,7 +30481,7 @@
 			borderDashOffset: 0.0,
 			borderJoinStyle: 'miter',
 			capBezierPoints: true,
-			fill: true // do we fill in the area between the line and its base axis
+			fill: true, // do we fill in the area between the line and its base axis
 		};
 
 		Chart.elements.Line = Chart.Element.extend({
@@ -29314,8 +30489,17 @@
 				var me = this;
 				var vm = me._view;
 				var spanGaps = vm.spanGaps;
-				var scaleZero = vm.scaleZero;
+				var fillPoint = vm.scaleZero;
 				var loop = me._loop;
+
+				// Handle different fill modes for cartesian lines
+				if (!loop) {
+					if (vm.fill === 'top') {
+						fillPoint = vm.scaleTop;
+					} else if (vm.fill === 'bottom') {
+						fillPoint = vm.scaleBottom;
+					}
+				}
 
 				var ctx = me._chart.ctx;
 				ctx.save();
@@ -29362,9 +30546,9 @@
 						// First point moves to it's starting position no matter what
 						if (index === 0) {
 							if (loop) {
-								ctx.moveTo(scaleZero.x, scaleZero.y);
+								ctx.moveTo(fillPoint.x, fillPoint.y);
 							} else {
-								ctx.moveTo(currentVM.x, scaleZero);
+								ctx.moveTo(currentVM.x, fillPoint);
 							}
 
 							if (!currentVM.skip) {
@@ -29378,9 +30562,9 @@
 								// Only do this if this is the first point that is skipped
 								if (!spanGaps && lastDrawnIndex === (index - 1)) {
 									if (loop) {
-										ctx.lineTo(scaleZero.x, scaleZero.y);
+										ctx.lineTo(fillPoint.x, fillPoint.y);
 									} else {
-										ctx.lineTo(previous._view.x, scaleZero);
+										ctx.lineTo(previous._view.x, fillPoint);
 									}
 								}
 							} else {
@@ -29393,7 +30577,7 @@
 									} else if (loop) {
 										ctx.lineTo(currentVM.x, currentVM.y);
 									} else {
-										ctx.lineTo(currentVM.x, scaleZero);
+										ctx.lineTo(currentVM.x, fillPoint);
 										ctx.lineTo(currentVM.x, currentVM.y);
 									}
 								} else {
@@ -29406,7 +30590,7 @@
 					}
 
 					if (!loop && lastDrawnIndex !== -1) {
-						ctx.lineTo(points[lastDrawnIndex]._view.x, scaleZero);
+						ctx.lineTo(points[lastDrawnIndex]._view.x, fillPoint);
 					}
 
 					ctx.fillStyle = vm.backgroundColor || globalDefaults.defaultColor;
@@ -29467,7 +30651,7 @@
 
 
 /***/ },
-/* 206 */
+/* 208 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29490,14 +30674,35 @@
 			hoverBorderWidth: 1
 		};
 
+		function xRange(mouseX) {
+			var vm = this._view;
+			return vm ? (Math.pow(mouseX - vm.x, 2) < Math.pow(vm.radius + vm.hitRadius, 2)) : false;
+		}
+
+		function yRange(mouseY) {
+			var vm = this._view;
+			return vm ? (Math.pow(mouseY - vm.y, 2) < Math.pow(vm.radius + vm.hitRadius, 2)) : false;
+		}
+
 		Chart.elements.Point = Chart.Element.extend({
 			inRange: function(mouseX, mouseY) {
 				var vm = this._view;
 				return vm ? ((Math.pow(mouseX - vm.x, 2) + Math.pow(mouseY - vm.y, 2)) < Math.pow(vm.hitRadius + vm.radius, 2)) : false;
 			},
-			inLabelRange: function(mouseX) {
+
+			inLabelRange: xRange,
+			inXRange: xRange,
+			inYRange: yRange,
+
+			getCenterPoint: function() {
 				var vm = this._view;
-				return vm ? (Math.pow(mouseX - vm.x, 2) < Math.pow(vm.radius + vm.hitRadius, 2)) : false;
+				return {
+					x: vm.x,
+					y: vm.y
+				};
+			},
+			getArea: function() {
+				return Math.PI * Math.pow(this._view.radius, 2);
 			},
 			tooltipPosition: function() {
 				var vm = this._view;
@@ -29530,7 +30735,7 @@
 
 
 /***/ },
-/* 207 */
+/* 209 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29545,6 +30750,44 @@
 			borderColor: globalOpts.defaultColor,
 			borderSkipped: 'bottom'
 		};
+
+		function isVertical(bar) {
+			return bar._view.width !== undefined;
+		}
+
+		/**
+		 * Helper function to get the bounds of the bar regardless of the orientation
+		 * @private
+		 * @param bar {Chart.Element.Rectangle} the bar
+		 * @return {Bounds} bounds of the bar
+		 */
+		function getBarBounds(bar) {
+			var vm = bar._view;
+			var x1, x2, y1, y2;
+
+			if (isVertical(bar)) {
+				// vertical
+				var halfWidth = vm.width / 2;
+				x1 = vm.x - halfWidth;
+				x2 = vm.x + halfWidth;
+				y1 = Math.min(vm.y, vm.base);
+				y2 = Math.max(vm.y, vm.base);
+			} else {
+				// horizontal bar
+				var halfHeight = vm.height / 2;
+				x1 = Math.min(vm.x, vm.base);
+				x2 = Math.max(vm.x, vm.base);
+				y1 = vm.y - halfHeight;
+				y2 = vm.y + halfHeight;
+			}
+
+			return {
+				left: x1,
+				top: y1,
+				right: x2,
+				bottom: y2
+			};
+		}
 
 		Chart.elements.Rectangle = Chart.Element.extend({
 			draw: function() {
@@ -29592,9 +30835,12 @@
 				}
 
 				// Draw rectangle from 'startCorner'
-				ctx.moveTo.apply(ctx, cornerAt(0));
+				var corner = cornerAt(0);
+				ctx.moveTo(corner[0], corner[1]);
+
 				for (var i = 1; i < 4; i++) {
-					ctx.lineTo.apply(ctx, cornerAt(i));
+					corner = cornerAt(i);
+					ctx.lineTo(corner[0], corner[1]);
 				}
 
 				ctx.fill();
@@ -29607,16 +30853,56 @@
 				return vm.base - vm.y;
 			},
 			inRange: function(mouseX, mouseY) {
-				var vm = this._view;
-				return vm ?
-						(vm.y < vm.base ?
-							(mouseX >= vm.x - vm.width / 2 && mouseX <= vm.x + vm.width / 2) && (mouseY >= vm.y && mouseY <= vm.base) :
-							(mouseX >= vm.x - vm.width / 2 && mouseX <= vm.x + vm.width / 2) && (mouseY >= vm.base && mouseY <= vm.y)) :
-						false;
+				var inRange = false;
+
+				if (this._view) {
+					var bounds = getBarBounds(this);
+					inRange = mouseX >= bounds.left && mouseX <= bounds.right && mouseY >= bounds.top && mouseY <= bounds.bottom;
+				}
+
+				return inRange;
 			},
-			inLabelRange: function(mouseX) {
+			inLabelRange: function(mouseX, mouseY) {
+				var me = this;
+				if (!me._view) {
+					return false;
+				}
+
+				var inRange = false;
+				var bounds = getBarBounds(me);
+
+				if (isVertical(me)) {
+					inRange = mouseX >= bounds.left && mouseX <= bounds.right;
+				} else {
+					inRange = mouseY >= bounds.top && mouseY <= bounds.bottom;
+				}
+
+				return inRange;
+			},
+			inXRange: function(mouseX) {
+				var bounds = getBarBounds(this);
+				return mouseX >= bounds.left && mouseX <= bounds.right;
+			},
+			inYRange: function(mouseY) {
+				var bounds = getBarBounds(this);
+				return mouseY >= bounds.top && mouseY <= bounds.bottom;
+			},
+			getCenterPoint: function() {
 				var vm = this._view;
-				return vm ? (mouseX >= vm.x - vm.width / 2 && mouseX <= vm.x + vm.width / 2) : false;
+				var x, y;
+				if (isVertical(this)) {
+					x = vm.x;
+					y = (vm.y + vm.base) / 2;
+				} else {
+					x = (vm.x + vm.base) / 2;
+					y = vm.y;
+				}
+
+				return {x: x, y: y};
+			},
+			getArea: function() {
+				var vm = this._view;
+				return vm.width * Math.abs(vm.y - vm.base);
 			},
 			tooltipPosition: function() {
 				var vm = this._view;
@@ -29631,7 +30917,7 @@
 
 
 /***/ },
-/* 208 */
+/* 210 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29658,7 +30944,7 @@
 						// move the top up to 0
 						me.max = 0;
 					} else if (minSign > 0 && maxSign > 0) {
-						// move the botttom down to 0
+						// move the bottom down to 0
 						me.min = 0;
 					}
 				}
@@ -29689,49 +30975,22 @@
 			buildTicks: function() {
 				var me = this;
 				var opts = me.options;
-				var ticks = me.ticks = [];
 				var tickOpts = opts.ticks;
-				var getValueOrDefault = helpers.getValueOrDefault;
 
 				// Figure out what the max number of ticks we can support it is based on the size of
 				// the axis area. For now, we say that the minimum tick spacing in pixels must be 50
 				// We also limit the maximum number of ticks to 11 which gives a nice 10 squares on
-				// the graph
-
+				// the graph. Make sure we always have at least 2 ticks
 				var maxTicks = me.getTickLimit();
-
-				// Make sure we always have at least 2 ticks
 				maxTicks = Math.max(2, maxTicks);
 
-				// To get a "nice" value for the tick spacing, we will use the appropriately named
-				// "nice number" algorithm. See http://stackoverflow.com/questions/8506881/nice-label-algorithm-for-charts-with-minimum-ticks
-				// for details.
-
-				var spacing;
-				var fixedStepSizeSet = (tickOpts.fixedStepSize && tickOpts.fixedStepSize > 0) || (tickOpts.stepSize && tickOpts.stepSize > 0);
-				if (fixedStepSizeSet) {
-					spacing = getValueOrDefault(tickOpts.fixedStepSize, tickOpts.stepSize);
-				} else {
-					var niceRange = helpers.niceNum(me.max - me.min, false);
-					spacing = helpers.niceNum(niceRange / (maxTicks - 1), true);
-				}
-				var niceMin = Math.floor(me.min / spacing) * spacing;
-				var niceMax = Math.ceil(me.max / spacing) * spacing;
-				var numSpaces = (niceMax - niceMin) / spacing;
-
-				// If very close to our rounded value, use it.
-				if (helpers.almostEquals(numSpaces, Math.round(numSpaces), spacing / 1000)) {
-					numSpaces = Math.round(numSpaces);
-				} else {
-					numSpaces = Math.ceil(numSpaces);
-				}
-
-				// Put the values into the ticks array
-				ticks.push(tickOpts.min !== undefined ? tickOpts.min : niceMin);
-				for (var j = 1; j < numSpaces; ++j) {
-					ticks.push(niceMin + (j * spacing));
-				}
-				ticks.push(tickOpts.max !== undefined ? tickOpts.max : niceMax);
+				var numericGeneratorOptions = {
+					maxTicks: maxTicks,
+					min: tickOpts.min,
+					max: tickOpts.max,
+					stepSize: helpers.getValueOrDefault(tickOpts.fixedStepSize, tickOpts.stepSize)
+				};
+				var ticks = me.ticks = Chart.Ticks.generators.linear(numericGeneratorOptions, me);
 
 				me.handleDirectionalChanges();
 
@@ -29762,7 +31021,7 @@
 
 
 /***/ },
-/* 209 */
+/* 211 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29777,7 +31036,7 @@
 
 		var DatasetScale = Chart.Scale.extend({
 			/**
-			* Internal function to get the correct labels. If data.xLabels or data.yLabels are defined, use tose
+			* Internal function to get the correct labels. If data.xLabels or data.yLabels are defined, use those
 			* else fall back to data.labels
 			* @private
 			*/
@@ -29897,7 +31156,7 @@
 
 
 /***/ },
-/* 210 */
+/* 212 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -29909,31 +31168,7 @@
 		var defaultConfig = {
 			position: 'left',
 			ticks: {
-				callback: function(tickValue, index, ticks) {
-					// If we have lots of ticks, don't use the ones
-					var delta = ticks.length > 3 ? ticks[2] - ticks[1] : ticks[1] - ticks[0];
-
-					// If we have a number like 2.5 as the delta, figure out how many decimal places we need
-					if (Math.abs(delta) > 1) {
-						if (tickValue !== Math.floor(tickValue)) {
-							// not an integer
-							delta = tickValue - Math.floor(tickValue);
-						}
-					}
-
-					var logDelta = helpers.log10(Math.abs(delta));
-					var tickString = '';
-
-					if (tickValue !== 0) {
-						var numDecimal = -1 * Math.floor(logDelta);
-						numDecimal = Math.max(Math.min(numDecimal, 20), 0); // toFixed has a max of 20 decimal places
-						tickString = tickValue.toFixed(numDecimal);
-					} else {
-						tickString = '0'; // never show decimal places for 0
-					}
-
-					return tickString;
-				}
+				callback: Chart.Ticks.formatters.linear
 			}
 		};
 
@@ -30095,7 +31330,7 @@
 
 
 /***/ },
-/* 211 */
+/* 213 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -30109,16 +31344,7 @@
 
 			// label settings
 			ticks: {
-				callback: function(value, index, arr) {
-					var remain = value / (Math.pow(10, Math.floor(helpers.log10(value))));
-
-					if (value === 0) {
-						return '0';
-					} else if (remain === 1 || remain === 2 || remain === 5 || index === 0 || index === arr.length - 1) {
-						return value.toExponential();
-					}
-					return '';
-				}
+				callback: Chart.Ticks.formatters.logarithmic
 			}
 		};
 
@@ -30224,43 +31450,12 @@
 				var me = this;
 				var opts = me.options;
 				var tickOpts = opts.ticks;
-				var getValueOrDefault = helpers.getValueOrDefault;
 
-				// Reset the ticks array. Later on, we will draw a grid line at these positions
-				// The array simply contains the numerical value of the spots where ticks will be
-				var ticks = me.ticks = [];
-
-				// Figure out what the max number of ticks we can support it is based on the size of
-				// the axis area. For now, we say that the minimum tick spacing in pixels must be 50
-				// We also limit the maximum number of ticks to 11 which gives a nice 10 squares on
-				// the graph
-
-				var tickVal = getValueOrDefault(tickOpts.min, Math.pow(10, Math.floor(helpers.log10(me.min))));
-
-				while (tickVal < me.max) {
-					ticks.push(tickVal);
-
-					var exp;
-					var significand;
-
-					if (tickVal === 0) {
-						exp = Math.floor(helpers.log10(me.minNotZero));
-						significand = Math.round(me.minNotZero / Math.pow(10, exp));
-					} else {
-						exp = Math.floor(helpers.log10(tickVal));
-						significand = Math.floor(tickVal / Math.pow(10, exp)) + 1;
-					}
-
-					if (significand === 10) {
-						significand = 1;
-						++exp;
-					}
-
-					tickVal = significand * Math.pow(10, exp);
-				}
-
-				var lastTick = getValueOrDefault(tickOpts.max, tickVal);
-				ticks.push(lastTick);
+				var generationOptions = {
+					min: tickOpts.min,
+					max: tickOpts.max
+				};
+				var ticks = me.ticks = Chart.Ticks.generators.logarithmic(generationOptions, me);
 
 				if (!me.isHorizontal()) {
 					// We are in a vertical orientation. The top value is the highest. So reverse the array
@@ -30318,7 +31513,7 @@
 						pixel += paddingLeft;
 					}
 				} else {
-					// Bottom - top since pixels increase downard on a screen
+					// Bottom - top since pixels increase downward on a screen
 					innerDimension = me.height - (paddingTop + paddingBottom);
 					if (start === 0 && !tickOpts.reverse) {
 						range = helpers.log10(me.end) - helpers.log10(me.minNotZero);
@@ -30367,7 +31562,7 @@
 
 
 /***/ },
-/* 212 */
+/* 214 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -30403,7 +31598,9 @@
 				backdropPaddingY: 2,
 
 				// Number - The backdrop padding to the side of the label in pixels
-				backdropPaddingX: 2
+				backdropPaddingX: 2,
+
+				callback: Chart.Ticks.formatters.linear
 			},
 
 			pointLabels: {
@@ -30787,13 +31984,13 @@
 
 
 /***/ },
-/* 213 */
+/* 215 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* global window: false */
 	'use strict';
 
-	var moment = __webpack_require__(214);
+	var moment = __webpack_require__(216);
 	moment = typeof(moment) === 'function' ? moment : window.moment;
 
 	module.exports = function(Chart) {
@@ -31056,7 +32253,7 @@
 						me.unitScale = 1;
 
 						if (helpers.isArray(unitDefinition.steps) && Math.ceil(me.scaleSizeInUnits / labelCapacity) < helpers.max(unitDefinition.steps)) {
-							// Use one of the prefedined steps
+							// Use one of the predefined steps
 							for (var idx = 0; idx < unitDefinition.steps.length; ++idx) {
 								if (unitDefinition.steps[idx] >= Math.ceil(me.scaleSizeInUnits / labelCapacity)) {
 									me.unitScale = helpers.getValueOrDefault(me.options.time.unitStepSize, unitDefinition.steps[idx]);
@@ -31253,7 +32450,7 @@
 
 
 /***/ },
-/* 214 */
+/* 216 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(module) {//! moment.js
@@ -33070,7 +34267,7 @@
 	            module && module.exports) {
 	        try {
 	            oldLocale = globalLocale._abbr;
-	            __webpack_require__(216)("./" + name);
+	            __webpack_require__(218)("./" + name);
 	            // because defineLocale currently also sets the global locale, we
 	            // want to undo that for lazy loaded locales
 	            getSetGlobalLocale(oldLocale);
@@ -35558,10 +36755,10 @@
 
 	})));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(215)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(217)(module)))
 
 /***/ },
-/* 215 */
+/* 217 */
 /***/ function(module, exports) {
 
 	module.exports = function(module) {
@@ -35577,226 +36774,226 @@
 
 
 /***/ },
-/* 216 */
+/* 218 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var map = {
-		"./af": 217,
-		"./af.js": 217,
-		"./ar": 218,
-		"./ar-dz": 219,
-		"./ar-dz.js": 219,
-		"./ar-ly": 220,
-		"./ar-ly.js": 220,
-		"./ar-ma": 221,
-		"./ar-ma.js": 221,
-		"./ar-sa": 222,
-		"./ar-sa.js": 222,
-		"./ar-tn": 223,
-		"./ar-tn.js": 223,
-		"./ar.js": 218,
-		"./az": 224,
-		"./az.js": 224,
-		"./be": 225,
-		"./be.js": 225,
-		"./bg": 226,
-		"./bg.js": 226,
-		"./bn": 227,
-		"./bn.js": 227,
-		"./bo": 228,
-		"./bo.js": 228,
-		"./br": 229,
-		"./br.js": 229,
-		"./bs": 230,
-		"./bs.js": 230,
-		"./ca": 231,
-		"./ca.js": 231,
-		"./cs": 232,
-		"./cs.js": 232,
-		"./cv": 233,
-		"./cv.js": 233,
-		"./cy": 234,
-		"./cy.js": 234,
-		"./da": 235,
-		"./da.js": 235,
-		"./de": 236,
-		"./de-at": 237,
-		"./de-at.js": 237,
-		"./de.js": 236,
-		"./dv": 238,
-		"./dv.js": 238,
-		"./el": 239,
-		"./el.js": 239,
-		"./en-au": 240,
-		"./en-au.js": 240,
-		"./en-ca": 241,
-		"./en-ca.js": 241,
-		"./en-gb": 242,
-		"./en-gb.js": 242,
-		"./en-ie": 243,
-		"./en-ie.js": 243,
-		"./en-nz": 244,
-		"./en-nz.js": 244,
-		"./eo": 245,
-		"./eo.js": 245,
-		"./es": 246,
-		"./es-do": 247,
-		"./es-do.js": 247,
-		"./es.js": 246,
-		"./et": 248,
-		"./et.js": 248,
-		"./eu": 249,
-		"./eu.js": 249,
-		"./fa": 250,
-		"./fa.js": 250,
-		"./fi": 251,
-		"./fi.js": 251,
-		"./fo": 252,
-		"./fo.js": 252,
-		"./fr": 253,
-		"./fr-ca": 254,
-		"./fr-ca.js": 254,
-		"./fr-ch": 255,
-		"./fr-ch.js": 255,
-		"./fr.js": 253,
-		"./fy": 256,
-		"./fy.js": 256,
-		"./gd": 257,
-		"./gd.js": 257,
-		"./gl": 258,
-		"./gl.js": 258,
-		"./he": 259,
-		"./he.js": 259,
-		"./hi": 260,
-		"./hi.js": 260,
-		"./hr": 261,
-		"./hr.js": 261,
-		"./hu": 262,
-		"./hu.js": 262,
-		"./hy-am": 263,
-		"./hy-am.js": 263,
-		"./id": 264,
-		"./id.js": 264,
-		"./is": 265,
-		"./is.js": 265,
-		"./it": 266,
-		"./it.js": 266,
-		"./ja": 267,
-		"./ja.js": 267,
-		"./jv": 268,
-		"./jv.js": 268,
-		"./ka": 269,
-		"./ka.js": 269,
-		"./kk": 270,
-		"./kk.js": 270,
-		"./km": 271,
-		"./km.js": 271,
-		"./ko": 272,
-		"./ko.js": 272,
-		"./ky": 273,
-		"./ky.js": 273,
-		"./lb": 274,
-		"./lb.js": 274,
-		"./lo": 275,
-		"./lo.js": 275,
-		"./lt": 276,
-		"./lt.js": 276,
-		"./lv": 277,
-		"./lv.js": 277,
-		"./me": 278,
-		"./me.js": 278,
-		"./mi": 279,
-		"./mi.js": 279,
-		"./mk": 280,
-		"./mk.js": 280,
-		"./ml": 281,
-		"./ml.js": 281,
-		"./mr": 282,
-		"./mr.js": 282,
-		"./ms": 283,
-		"./ms-my": 284,
-		"./ms-my.js": 284,
-		"./ms.js": 283,
-		"./my": 285,
-		"./my.js": 285,
-		"./nb": 286,
-		"./nb.js": 286,
-		"./ne": 287,
-		"./ne.js": 287,
-		"./nl": 288,
-		"./nl-be": 289,
-		"./nl-be.js": 289,
-		"./nl.js": 288,
-		"./nn": 290,
-		"./nn.js": 290,
-		"./pa-in": 291,
-		"./pa-in.js": 291,
-		"./pl": 292,
-		"./pl.js": 292,
-		"./pt": 293,
-		"./pt-br": 294,
-		"./pt-br.js": 294,
-		"./pt.js": 293,
-		"./ro": 295,
-		"./ro.js": 295,
-		"./ru": 296,
-		"./ru.js": 296,
-		"./se": 297,
-		"./se.js": 297,
-		"./si": 298,
-		"./si.js": 298,
-		"./sk": 299,
-		"./sk.js": 299,
-		"./sl": 300,
-		"./sl.js": 300,
-		"./sq": 301,
-		"./sq.js": 301,
-		"./sr": 302,
-		"./sr-cyrl": 303,
-		"./sr-cyrl.js": 303,
-		"./sr.js": 302,
-		"./ss": 304,
-		"./ss.js": 304,
-		"./sv": 305,
-		"./sv.js": 305,
-		"./sw": 306,
-		"./sw.js": 306,
-		"./ta": 307,
-		"./ta.js": 307,
-		"./te": 308,
-		"./te.js": 308,
-		"./tet": 309,
-		"./tet.js": 309,
-		"./th": 310,
-		"./th.js": 310,
-		"./tl-ph": 311,
-		"./tl-ph.js": 311,
-		"./tlh": 312,
-		"./tlh.js": 312,
-		"./tr": 313,
-		"./tr.js": 313,
-		"./tzl": 314,
-		"./tzl.js": 314,
-		"./tzm": 315,
-		"./tzm-latn": 316,
-		"./tzm-latn.js": 316,
-		"./tzm.js": 315,
-		"./uk": 317,
-		"./uk.js": 317,
-		"./uz": 318,
-		"./uz.js": 318,
-		"./vi": 319,
-		"./vi.js": 319,
-		"./x-pseudo": 320,
-		"./x-pseudo.js": 320,
-		"./yo": 321,
-		"./yo.js": 321,
-		"./zh-cn": 322,
-		"./zh-cn.js": 322,
-		"./zh-hk": 323,
-		"./zh-hk.js": 323,
-		"./zh-tw": 324,
-		"./zh-tw.js": 324
+		"./af": 219,
+		"./af.js": 219,
+		"./ar": 220,
+		"./ar-dz": 221,
+		"./ar-dz.js": 221,
+		"./ar-ly": 222,
+		"./ar-ly.js": 222,
+		"./ar-ma": 223,
+		"./ar-ma.js": 223,
+		"./ar-sa": 224,
+		"./ar-sa.js": 224,
+		"./ar-tn": 225,
+		"./ar-tn.js": 225,
+		"./ar.js": 220,
+		"./az": 226,
+		"./az.js": 226,
+		"./be": 227,
+		"./be.js": 227,
+		"./bg": 228,
+		"./bg.js": 228,
+		"./bn": 229,
+		"./bn.js": 229,
+		"./bo": 230,
+		"./bo.js": 230,
+		"./br": 231,
+		"./br.js": 231,
+		"./bs": 232,
+		"./bs.js": 232,
+		"./ca": 233,
+		"./ca.js": 233,
+		"./cs": 234,
+		"./cs.js": 234,
+		"./cv": 235,
+		"./cv.js": 235,
+		"./cy": 236,
+		"./cy.js": 236,
+		"./da": 237,
+		"./da.js": 237,
+		"./de": 238,
+		"./de-at": 239,
+		"./de-at.js": 239,
+		"./de.js": 238,
+		"./dv": 240,
+		"./dv.js": 240,
+		"./el": 241,
+		"./el.js": 241,
+		"./en-au": 242,
+		"./en-au.js": 242,
+		"./en-ca": 243,
+		"./en-ca.js": 243,
+		"./en-gb": 244,
+		"./en-gb.js": 244,
+		"./en-ie": 245,
+		"./en-ie.js": 245,
+		"./en-nz": 246,
+		"./en-nz.js": 246,
+		"./eo": 247,
+		"./eo.js": 247,
+		"./es": 248,
+		"./es-do": 249,
+		"./es-do.js": 249,
+		"./es.js": 248,
+		"./et": 250,
+		"./et.js": 250,
+		"./eu": 251,
+		"./eu.js": 251,
+		"./fa": 252,
+		"./fa.js": 252,
+		"./fi": 253,
+		"./fi.js": 253,
+		"./fo": 254,
+		"./fo.js": 254,
+		"./fr": 255,
+		"./fr-ca": 256,
+		"./fr-ca.js": 256,
+		"./fr-ch": 257,
+		"./fr-ch.js": 257,
+		"./fr.js": 255,
+		"./fy": 258,
+		"./fy.js": 258,
+		"./gd": 259,
+		"./gd.js": 259,
+		"./gl": 260,
+		"./gl.js": 260,
+		"./he": 261,
+		"./he.js": 261,
+		"./hi": 262,
+		"./hi.js": 262,
+		"./hr": 263,
+		"./hr.js": 263,
+		"./hu": 264,
+		"./hu.js": 264,
+		"./hy-am": 265,
+		"./hy-am.js": 265,
+		"./id": 266,
+		"./id.js": 266,
+		"./is": 267,
+		"./is.js": 267,
+		"./it": 268,
+		"./it.js": 268,
+		"./ja": 269,
+		"./ja.js": 269,
+		"./jv": 270,
+		"./jv.js": 270,
+		"./ka": 271,
+		"./ka.js": 271,
+		"./kk": 272,
+		"./kk.js": 272,
+		"./km": 273,
+		"./km.js": 273,
+		"./ko": 274,
+		"./ko.js": 274,
+		"./ky": 275,
+		"./ky.js": 275,
+		"./lb": 276,
+		"./lb.js": 276,
+		"./lo": 277,
+		"./lo.js": 277,
+		"./lt": 278,
+		"./lt.js": 278,
+		"./lv": 279,
+		"./lv.js": 279,
+		"./me": 280,
+		"./me.js": 280,
+		"./mi": 281,
+		"./mi.js": 281,
+		"./mk": 282,
+		"./mk.js": 282,
+		"./ml": 283,
+		"./ml.js": 283,
+		"./mr": 284,
+		"./mr.js": 284,
+		"./ms": 285,
+		"./ms-my": 286,
+		"./ms-my.js": 286,
+		"./ms.js": 285,
+		"./my": 287,
+		"./my.js": 287,
+		"./nb": 288,
+		"./nb.js": 288,
+		"./ne": 289,
+		"./ne.js": 289,
+		"./nl": 290,
+		"./nl-be": 291,
+		"./nl-be.js": 291,
+		"./nl.js": 290,
+		"./nn": 292,
+		"./nn.js": 292,
+		"./pa-in": 293,
+		"./pa-in.js": 293,
+		"./pl": 294,
+		"./pl.js": 294,
+		"./pt": 295,
+		"./pt-br": 296,
+		"./pt-br.js": 296,
+		"./pt.js": 295,
+		"./ro": 297,
+		"./ro.js": 297,
+		"./ru": 298,
+		"./ru.js": 298,
+		"./se": 299,
+		"./se.js": 299,
+		"./si": 300,
+		"./si.js": 300,
+		"./sk": 301,
+		"./sk.js": 301,
+		"./sl": 302,
+		"./sl.js": 302,
+		"./sq": 303,
+		"./sq.js": 303,
+		"./sr": 304,
+		"./sr-cyrl": 305,
+		"./sr-cyrl.js": 305,
+		"./sr.js": 304,
+		"./ss": 306,
+		"./ss.js": 306,
+		"./sv": 307,
+		"./sv.js": 307,
+		"./sw": 308,
+		"./sw.js": 308,
+		"./ta": 309,
+		"./ta.js": 309,
+		"./te": 310,
+		"./te.js": 310,
+		"./tet": 311,
+		"./tet.js": 311,
+		"./th": 312,
+		"./th.js": 312,
+		"./tl-ph": 313,
+		"./tl-ph.js": 313,
+		"./tlh": 314,
+		"./tlh.js": 314,
+		"./tr": 315,
+		"./tr.js": 315,
+		"./tzl": 316,
+		"./tzl.js": 316,
+		"./tzm": 317,
+		"./tzm-latn": 318,
+		"./tzm-latn.js": 318,
+		"./tzm.js": 317,
+		"./uk": 319,
+		"./uk.js": 319,
+		"./uz": 320,
+		"./uz.js": 320,
+		"./vi": 321,
+		"./vi.js": 321,
+		"./x-pseudo": 322,
+		"./x-pseudo.js": 322,
+		"./yo": 323,
+		"./yo.js": 323,
+		"./zh-cn": 324,
+		"./zh-cn.js": 324,
+		"./zh-hk": 325,
+		"./zh-hk.js": 325,
+		"./zh-tw": 326,
+		"./zh-tw.js": 326
 	};
 	function webpackContext(req) {
 		return __webpack_require__(webpackContextResolve(req));
@@ -35809,11 +37006,11 @@
 	};
 	webpackContext.resolve = webpackContextResolve;
 	module.exports = webpackContext;
-	webpackContext.id = 216;
+	webpackContext.id = 218;
 
 
 /***/ },
-/* 217 */
+/* 219 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35821,7 +37018,7 @@
 	//! author : Werner Mollentze : https://github.com/wernerm
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -35891,7 +37088,7 @@
 
 
 /***/ },
-/* 218 */
+/* 220 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -35901,7 +37098,7 @@
 	//! author : forabi https://github.com/forabi
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36038,7 +37235,7 @@
 
 
 /***/ },
-/* 219 */
+/* 221 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36046,7 +37243,7 @@
 	//! author : Noureddine LOUAHEDJ : https://github.com/noureddineme
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36102,7 +37299,7 @@
 
 
 /***/ },
-/* 220 */
+/* 222 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36110,7 +37307,7 @@
 	//! author : Ali Hmer: https://github.com/kikoanis
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36233,7 +37430,7 @@
 
 
 /***/ },
-/* 221 */
+/* 223 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36242,7 +37439,7 @@
 	//! author : Abdel Said : https://github.com/abdelsaid
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36298,7 +37495,7 @@
 
 
 /***/ },
-/* 222 */
+/* 224 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36306,7 +37503,7 @@
 	//! author : Suhail Alkowaileet : https://github.com/xsoh
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36408,7 +37605,7 @@
 
 
 /***/ },
-/* 223 */
+/* 225 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36416,7 +37613,7 @@
 	//! author : Nader Toukabri : https://github.com/naderio
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36472,7 +37669,7 @@
 
 
 /***/ },
-/* 224 */
+/* 226 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36480,7 +37677,7 @@
 	//! author : topchiyev : https://github.com/topchiyev
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36582,7 +37779,7 @@
 
 
 /***/ },
-/* 225 */
+/* 227 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36592,7 +37789,7 @@
 	//! Author : Menelion Elensúle : https://github.com/Oire
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36721,7 +37918,7 @@
 
 
 /***/ },
-/* 226 */
+/* 228 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36729,7 +37926,7 @@
 	//! author : Krasen Borisov : https://github.com/kraz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36816,7 +38013,7 @@
 
 
 /***/ },
-/* 227 */
+/* 229 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36824,7 +38021,7 @@
 	//! author : Kaushik Gandhi : https://github.com/kaushikgandhi
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -36940,7 +38137,7 @@
 
 
 /***/ },
-/* 228 */
+/* 230 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -36948,7 +38145,7 @@
 	//! author : Thupten N. Chakrishar : https://github.com/vajradog
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37064,7 +38261,7 @@
 
 
 /***/ },
-/* 229 */
+/* 231 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37072,7 +38269,7 @@
 	//! author : Jean-Baptiste Le Duigou : https://github.com/jbleduigou
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37177,7 +38374,7 @@
 
 
 /***/ },
-/* 230 */
+/* 232 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37186,7 +38383,7 @@
 	//! based on (hr) translation by Bojan Marković
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37325,7 +38522,7 @@
 
 
 /***/ },
-/* 231 */
+/* 233 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37333,7 +38530,7 @@
 	//! author : Juan G. Hurtado : https://github.com/juanghurtado
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37411,7 +38608,7 @@
 
 
 /***/ },
-/* 232 */
+/* 234 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37419,7 +38616,7 @@
 	//! author : petrbela : https://github.com/petrbela
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37588,7 +38785,7 @@
 
 
 /***/ },
-/* 233 */
+/* 235 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37596,7 +38793,7 @@
 	//! author : Anatoly Mironov : https://github.com/mirontoli
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37656,7 +38853,7 @@
 
 
 /***/ },
-/* 234 */
+/* 236 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37665,7 +38862,7 @@
 	//! author : https://github.com/ryangreaves
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37742,7 +38939,7 @@
 
 
 /***/ },
-/* 235 */
+/* 237 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37750,7 +38947,7 @@
 	//! author : Ulrik Nielsen : https://github.com/mrbase
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37807,7 +39004,7 @@
 
 
 /***/ },
-/* 236 */
+/* 238 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37817,7 +39014,7 @@
 	//! author : Mikolaj Dadela : https://github.com/mik01aj
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37890,7 +39087,7 @@
 
 
 /***/ },
-/* 237 */
+/* 239 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37901,7 +39098,7 @@
 	//! author : Mikolaj Dadela : https://github.com/mik01aj
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -37974,7 +39171,7 @@
 
 
 /***/ },
-/* 238 */
+/* 240 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -37982,7 +39179,7 @@
 	//! author : Jawish Hameed : https://github.com/jawish
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38079,7 +39276,7 @@
 
 
 /***/ },
-/* 239 */
+/* 241 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38087,7 +39284,7 @@
 	//! author : Aggelos Karalias : https://github.com/mehiel
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38182,7 +39379,7 @@
 
 
 /***/ },
-/* 240 */
+/* 242 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38190,7 +39387,7 @@
 	//! author : Jared Morse : https://github.com/jarcoal
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38254,7 +39451,7 @@
 
 
 /***/ },
-/* 241 */
+/* 243 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38262,7 +39459,7 @@
 	//! author : Jonathan Abourbih : https://github.com/jonbca
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38322,7 +39519,7 @@
 
 
 /***/ },
-/* 242 */
+/* 244 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38330,7 +39527,7 @@
 	//! author : Chris Gedrim : https://github.com/chrisgedrim
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38394,7 +39591,7 @@
 
 
 /***/ },
-/* 243 */
+/* 245 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38402,7 +39599,7 @@
 	//! author : Chris Cartlidge : https://github.com/chriscartlidge
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38466,7 +39663,7 @@
 
 
 /***/ },
-/* 244 */
+/* 246 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38474,7 +39671,7 @@
 	//! author : Luke McGregor : https://github.com/lukemcgregor
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38538,7 +39735,7 @@
 
 
 /***/ },
-/* 245 */
+/* 247 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38548,7 +39745,7 @@
 	//!          Se ne, bonvolu korekti kaj avizi min por ke mi povas lerni!
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38616,7 +39813,7 @@
 
 
 /***/ },
-/* 246 */
+/* 248 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38624,7 +39821,7 @@
 	//! author : Julio Napurí : https://github.com/julionc
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38702,14 +39899,14 @@
 
 
 /***/ },
-/* 247 */
+/* 249 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
 	//! locale : Spanish (Dominican Republic) [es-do]
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38787,7 +39984,7 @@
 
 
 /***/ },
-/* 248 */
+/* 250 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38796,7 +39993,7 @@
 	//! improvements : Illimar Tambek : https://github.com/ragulka
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38872,7 +40069,7 @@
 
 
 /***/ },
-/* 249 */
+/* 251 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38880,7 +40077,7 @@
 	//! author : Eneko Illarramendi : https://github.com/eillarra
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -38943,7 +40140,7 @@
 
 
 /***/ },
-/* 250 */
+/* 252 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -38951,7 +40148,7 @@
 	//! author : Ebrahim Byagowi : https://github.com/ebraminio
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39055,7 +40252,7 @@
 
 
 /***/ },
-/* 251 */
+/* 253 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39063,7 +40260,7 @@
 	//! author : Tarmo Aidantausta : https://github.com/bleadof
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39167,7 +40364,7 @@
 
 
 /***/ },
-/* 252 */
+/* 254 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39175,7 +40372,7 @@
 	//! author : Ragnar Johannesen : https://github.com/ragnar123
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39232,7 +40429,7 @@
 
 
 /***/ },
-/* 253 */
+/* 255 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39240,7 +40437,7 @@
 	//! author : John Fischer : https://github.com/jfroffice
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39301,7 +40498,7 @@
 
 
 /***/ },
-/* 254 */
+/* 256 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39309,7 +40506,7 @@
 	//! author : Jonathan Abourbih : https://github.com/jonbca
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39366,7 +40563,7 @@
 
 
 /***/ },
-/* 255 */
+/* 257 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39374,7 +40571,7 @@
 	//! author : Gaspard Bucher : https://github.com/gaspard
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39435,7 +40632,7 @@
 
 
 /***/ },
-/* 256 */
+/* 258 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39443,7 +40640,7 @@
 	//! author : Robin van der Vliet : https://github.com/robin0van0der0v
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39513,7 +40710,7 @@
 
 
 /***/ },
-/* 257 */
+/* 259 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39521,7 +40718,7 @@
 	//! author : Jon Ashdown : https://github.com/jonashdown
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39594,7 +40791,7 @@
 
 
 /***/ },
-/* 258 */
+/* 260 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39602,7 +40799,7 @@
 	//! author : Juan G. Hurtado : https://github.com/juanghurtado
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39676,7 +40873,7 @@
 
 
 /***/ },
-/* 259 */
+/* 261 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39686,7 +40883,7 @@
 	//! author : Tal Ater : https://github.com/TalAter
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39780,7 +40977,7 @@
 
 
 /***/ },
-/* 260 */
+/* 262 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39788,7 +40985,7 @@
 	//! author : Mayank Singhal : https://github.com/mayanksinghal
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -39909,7 +41106,7 @@
 
 
 /***/ },
-/* 261 */
+/* 263 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -39917,7 +41114,7 @@
 	//! author : Bojan Marković : https://github.com/bmarkovic
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40059,7 +41256,7 @@
 
 
 /***/ },
-/* 262 */
+/* 264 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40067,7 +41264,7 @@
 	//! author : Adam Brunner : https://github.com/adambrunner
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40173,7 +41370,7 @@
 
 
 /***/ },
-/* 263 */
+/* 265 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40181,7 +41378,7 @@
 	//! author : Armendarabyan : https://github.com/armendarabyan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40273,7 +41470,7 @@
 
 
 /***/ },
-/* 264 */
+/* 266 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40282,7 +41479,7 @@
 	//! reference: http://id.wikisource.org/wiki/Pedoman_Umum_Ejaan_Bahasa_Indonesia_yang_Disempurnakan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40361,7 +41558,7 @@
 
 
 /***/ },
-/* 265 */
+/* 267 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40369,7 +41566,7 @@
 	//! author : Hinrik Örn Sigurðsson : https://github.com/hinrik
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40493,7 +41690,7 @@
 
 
 /***/ },
-/* 266 */
+/* 268 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40502,7 +41699,7 @@
 	//! author: Mattia Larentis: https://github.com/nostalgiaz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40568,7 +41765,7 @@
 
 
 /***/ },
-/* 267 */
+/* 269 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40576,7 +41773,7 @@
 	//! author : LI Long : https://github.com/baryon
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40649,7 +41846,7 @@
 
 
 /***/ },
-/* 268 */
+/* 270 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40658,7 +41855,7 @@
 	//! reference: http://jv.wikipedia.org/wiki/Basa_Jawa
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40737,7 +41934,7 @@
 
 
 /***/ },
-/* 269 */
+/* 271 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40745,7 +41942,7 @@
 	//! author : Irakli Janiashvili : https://github.com/irakli-janiashvili
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40831,7 +42028,7 @@
 
 
 /***/ },
-/* 270 */
+/* 272 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40839,7 +42036,7 @@
 	//! authors : Nurlan Rakhimzhanov : https://github.com/nurlan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40923,7 +42120,7 @@
 
 
 /***/ },
-/* 271 */
+/* 273 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40931,7 +42128,7 @@
 	//! author : Kruy Vanna : https://github.com/kruyvanna
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -40986,7 +42183,7 @@
 
 
 /***/ },
-/* 272 */
+/* 274 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -40995,7 +42192,7 @@
 	//! author : Jeeeyul Lee <jeeeyul@gmail.com>
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41056,7 +42253,7 @@
 
 
 /***/ },
-/* 273 */
+/* 275 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41064,7 +42261,7 @@
 	//! author : Chyngyz Arystan uulu : https://github.com/chyngyz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41149,7 +42346,7 @@
 
 
 /***/ },
-/* 274 */
+/* 276 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41158,7 +42355,7 @@
 	//! author : David Raison : https://github.com/kwisatz
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41291,7 +42488,7 @@
 
 
 /***/ },
-/* 275 */
+/* 277 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41299,7 +42496,7 @@
 	//! author : Ryan Hart : https://github.com/ryanhart2
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41366,7 +42563,7 @@
 
 
 /***/ },
-/* 276 */
+/* 278 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41374,7 +42571,7 @@
 	//! author : Mindaugas Mozūras : https://github.com/mmozuras
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41488,7 +42685,7 @@
 
 
 /***/ },
-/* 277 */
+/* 279 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41497,7 +42694,7 @@
 	//! author : Jānis Elmeris : https://github.com/JanisE
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41590,7 +42787,7 @@
 
 
 /***/ },
-/* 278 */
+/* 280 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41598,7 +42795,7 @@
 	//! author : Miodrag Nikač <miodrag@restartit.me> : https://github.com/miodragnikac
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41706,7 +42903,7 @@
 
 
 /***/ },
-/* 279 */
+/* 281 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41714,7 +42911,7 @@
 	//! author : John Corrigan <robbiecloset@gmail.com> : https://github.com/johnideal
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41775,7 +42972,7 @@
 
 
 /***/ },
-/* 280 */
+/* 282 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41783,7 +42980,7 @@
 	//! author : Borislav Mickov : https://github.com/B0k0
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41870,7 +43067,7 @@
 
 
 /***/ },
-/* 281 */
+/* 283 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41878,7 +43075,7 @@
 	//! author : Floyd Pink : https://github.com/floydpink
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -41956,7 +43153,7 @@
 
 
 /***/ },
-/* 282 */
+/* 284 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -41965,7 +43162,7 @@
 	//! author : Vivek Athalye : https://github.com/vnathalye
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42120,7 +43317,7 @@
 
 
 /***/ },
-/* 283 */
+/* 285 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42128,7 +43325,7 @@
 	//! author : Weldan Jamili : https://github.com/weldan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42207,7 +43404,7 @@
 
 
 /***/ },
-/* 284 */
+/* 286 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42216,7 +43413,7 @@
 	//! author : Weldan Jamili : https://github.com/weldan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42295,7 +43492,7 @@
 
 
 /***/ },
-/* 285 */
+/* 287 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42305,7 +43502,7 @@
 	//! author : Tin Aung Lin : https://github.com/thanyawzinmin
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42396,7 +43593,7 @@
 
 
 /***/ },
-/* 286 */
+/* 288 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42405,7 +43602,7 @@
 	//!           Sigurd Gartmann : https://github.com/sigurdga
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42464,7 +43661,7 @@
 
 
 /***/ },
-/* 287 */
+/* 289 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42472,7 +43669,7 @@
 	//! author : suvash : https://github.com/suvash
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42592,7 +43789,7 @@
 
 
 /***/ },
-/* 288 */
+/* 290 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42601,7 +43798,7 @@
 	//! author : Jacob Middag : https://github.com/middagj
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42683,7 +43880,7 @@
 
 
 /***/ },
-/* 289 */
+/* 291 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42692,7 +43889,7 @@
 	//! author : Jacob Middag : https://github.com/middagj
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42774,7 +43971,7 @@
 
 
 /***/ },
-/* 290 */
+/* 292 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42782,7 +43979,7 @@
 	//! author : https://github.com/mechuwind
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42839,7 +44036,7 @@
 
 
 /***/ },
-/* 291 */
+/* 293 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42847,7 +44044,7 @@
 	//! author : Harpreet Singh : https://github.com/harpreetkhalsagtbit
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -42968,7 +44165,7 @@
 
 
 /***/ },
-/* 292 */
+/* 294 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -42976,7 +44173,7 @@
 	//! author : Rafal Hirsz : https://github.com/evoL
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43078,7 +44275,7 @@
 
 
 /***/ },
-/* 293 */
+/* 295 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43086,7 +44283,7 @@
 	//! author : Jefferson : https://github.com/jalex79
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43148,7 +44345,7 @@
 
 
 /***/ },
-/* 294 */
+/* 296 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43156,7 +44353,7 @@
 	//! author : Caio Ribeiro Pereira : https://github.com/caio-ribeiro-pereira
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43214,7 +44411,7 @@
 
 
 /***/ },
-/* 295 */
+/* 297 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43223,7 +44420,7 @@
 	//! author : Valentin Agachi : https://github.com/avaly
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43294,7 +44491,7 @@
 
 
 /***/ },
-/* 296 */
+/* 298 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43304,7 +44501,7 @@
 	//! author : Коренберг Марк : https://github.com/socketpair
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43482,7 +44679,7 @@
 
 
 /***/ },
-/* 297 */
+/* 299 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43490,7 +44687,7 @@
 	//! authors : Bård Rolstad Henriksen : https://github.com/karamell
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43548,7 +44745,7 @@
 
 
 /***/ },
-/* 298 */
+/* 300 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43556,7 +44753,7 @@
 	//! author : Sampath Sitinamaluwa : https://github.com/sampathsris
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43624,7 +44821,7 @@
 
 
 /***/ },
-/* 299 */
+/* 301 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43633,7 +44830,7 @@
 	//! based on work of petrbela : https://github.com/petrbela
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43779,7 +44976,7 @@
 
 
 /***/ },
-/* 300 */
+/* 302 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43787,7 +44984,7 @@
 	//! author : Robert Sedovšek : https://github.com/sedovsek
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -43946,7 +45143,7 @@
 
 
 /***/ },
-/* 301 */
+/* 303 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -43956,7 +45153,7 @@
 	//! author : Oerd Cukalla : https://github.com/oerd
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44021,7 +45218,7 @@
 
 
 /***/ },
-/* 302 */
+/* 304 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44029,7 +45226,7 @@
 	//! author : Milan Janačković<milanjanackovic@gmail.com> : https://github.com/milan-j
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44136,7 +45333,7 @@
 
 
 /***/ },
-/* 303 */
+/* 305 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44144,7 +45341,7 @@
 	//! author : Milan Janačković<milanjanackovic@gmail.com> : https://github.com/milan-j
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44251,7 +45448,7 @@
 
 
 /***/ },
-/* 304 */
+/* 306 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44259,7 +45456,7 @@
 	//! author : Nicolai Davies<mail@nicolai.io> : https://github.com/nicolaidavies
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44345,7 +45542,7 @@
 
 
 /***/ },
-/* 305 */
+/* 307 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44353,7 +45550,7 @@
 	//! author : Jens Alm : https://github.com/ulmus
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44419,7 +45616,7 @@
 
 
 /***/ },
-/* 306 */
+/* 308 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44427,7 +45624,7 @@
 	//! author : Fahad Kassim : https://github.com/fadsel
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44483,7 +45680,7 @@
 
 
 /***/ },
-/* 307 */
+/* 309 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44491,7 +45688,7 @@
 	//! author : Arjunkumar Krishnamoorthy : https://github.com/tk120404
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44618,7 +45815,7 @@
 
 
 /***/ },
-/* 308 */
+/* 310 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44626,7 +45823,7 @@
 	//! author : Krishna Chaitanya Thota : https://github.com/kcthota
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44712,7 +45909,7 @@
 
 
 /***/ },
-/* 309 */
+/* 311 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44721,7 +45918,7 @@
 	//! author : Onorio De J. Afonso : https://github.com/marobo
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44785,7 +45982,7 @@
 
 
 /***/ },
-/* 310 */
+/* 312 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44793,7 +45990,7 @@
 	//! author : Kridsada Thanabulpong : https://github.com/sirn
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44857,7 +46054,7 @@
 
 
 /***/ },
-/* 311 */
+/* 313 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44865,7 +46062,7 @@
 	//! author : Dan Hagman : https://github.com/hagmandan
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -44924,7 +46121,7 @@
 
 
 /***/ },
-/* 312 */
+/* 314 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -44932,7 +46129,7 @@
 	//! author : Dominika Kruk : https://github.com/amaranthrose
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45049,7 +46246,7 @@
 
 
 /***/ },
-/* 313 */
+/* 315 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45058,7 +46255,7 @@
 	//!           Burak Yiğit Kaya: https://github.com/BYK
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45144,7 +46341,7 @@
 
 
 /***/ },
-/* 314 */
+/* 316 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45153,7 +46350,7 @@
 	//! author : Iustì Canun
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45240,7 +46437,7 @@
 
 
 /***/ },
-/* 315 */
+/* 317 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45248,7 +46445,7 @@
 	//! author : Abdel Said : https://github.com/abdelsaid
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45303,7 +46500,7 @@
 
 
 /***/ },
-/* 316 */
+/* 318 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45311,7 +46508,7 @@
 	//! author : Abdel Said : https://github.com/abdelsaid
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45366,7 +46563,7 @@
 
 
 /***/ },
-/* 317 */
+/* 319 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45375,7 +46572,7 @@
 	//! Author : Menelion Elensúle : https://github.com/Oire
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45517,7 +46714,7 @@
 
 
 /***/ },
-/* 318 */
+/* 320 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45525,7 +46722,7 @@
 	//! author : Sardor Muminov : https://github.com/muminoff
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45580,7 +46777,7 @@
 
 
 /***/ },
-/* 319 */
+/* 321 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45588,7 +46785,7 @@
 	//! author : Bang Nguyen : https://github.com/bangnk
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45664,7 +46861,7 @@
 
 
 /***/ },
-/* 320 */
+/* 322 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45672,7 +46869,7 @@
 	//! author : Andrew Hood : https://github.com/andrewhood125
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45737,7 +46934,7 @@
 
 
 /***/ },
-/* 321 */
+/* 323 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45745,7 +46942,7 @@
 	//! author : Atolagbe Abisoye : https://github.com/andela-batolagbe
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45802,7 +46999,7 @@
 
 
 /***/ },
-/* 322 */
+/* 324 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45811,7 +47008,7 @@
 	//! author : Zeno Zeng : https://github.com/zenozeng
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -45934,7 +47131,7 @@
 
 
 /***/ },
-/* 323 */
+/* 325 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -45944,7 +47141,7 @@
 	//! author : Konstantin : https://github.com/skfd
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -46044,7 +47241,7 @@
 
 
 /***/ },
-/* 324 */
+/* 326 */
 /***/ function(module, exports, __webpack_require__) {
 
 	//! moment.js locale configuration
@@ -46053,7 +47250,7 @@
 	//! author : Chris Lam : https://github.com/hehachris
 
 	;(function (global, factory) {
-	    true ? factory(__webpack_require__(214)) :
+	    true ? factory(__webpack_require__(216)) :
 	   typeof define === 'function' && define.amd ? define(['../moment'], factory) :
 	   factory(global.moment)
 	}(this, (function (moment) { 'use strict';
@@ -46153,7 +47350,7 @@
 
 
 /***/ },
-/* 325 */
+/* 327 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -46227,31 +47424,29 @@
 				var custom = rectangle.custom || {};
 				var dataset = me.getDataset();
 
-				helpers.extend(rectangle, {
-					// Utility
-					_xScale: xScale,
-					_yScale: yScale,
-					_datasetIndex: me.index,
-					_index: index,
+				rectangle._xScale = xScale;
+				rectangle._yScale = yScale;
+				rectangle._datasetIndex = me.index;
+				rectangle._index = index;
 
-					// Desired view properties
-					_model: {
-						x: me.calculateBarX(index, me.index),
-						y: reset ? scaleBase : me.calculateBarY(index, me.index),
+				var ruler = me.getRuler(index);
+				rectangle._model = {
+					x: me.calculateBarX(index, me.index, ruler),
+					y: reset ? scaleBase : me.calculateBarY(index, me.index),
 
-						// Tooltip
-						label: me.chart.data.labels[index],
-						datasetLabel: dataset.label,
+					// Tooltip
+					label: me.chart.data.labels[index],
+					datasetLabel: dataset.label,
 
-						// Appearance
-						base: reset ? scaleBase : me.calculateBarBase(me.index, index),
-						width: me.calculateBarWidth(index),
-						backgroundColor: custom.backgroundColor ? custom.backgroundColor : helpers.getValueAtIndexOrDefault(dataset.backgroundColor, index, rectangleElementOptions.backgroundColor),
-						borderSkipped: custom.borderSkipped ? custom.borderSkipped : rectangleElementOptions.borderSkipped,
-						borderColor: custom.borderColor ? custom.borderColor : helpers.getValueAtIndexOrDefault(dataset.borderColor, index, rectangleElementOptions.borderColor),
-						borderWidth: custom.borderWidth ? custom.borderWidth : helpers.getValueAtIndexOrDefault(dataset.borderWidth, index, rectangleElementOptions.borderWidth)
-					}
-				});
+					// Appearance
+					base: reset ? scaleBase : me.calculateBarBase(me.index, index),
+					width: me.calculateBarWidth(ruler),
+					backgroundColor: custom.backgroundColor ? custom.backgroundColor : helpers.getValueAtIndexOrDefault(dataset.backgroundColor, index, rectangleElementOptions.backgroundColor),
+					borderSkipped: custom.borderSkipped ? custom.borderSkipped : rectangleElementOptions.borderSkipped,
+					borderColor: custom.borderColor ? custom.borderColor : helpers.getValueAtIndexOrDefault(dataset.borderColor, index, rectangleElementOptions.borderColor),
+					borderWidth: custom.borderWidth ? custom.borderWidth : helpers.getValueAtIndexOrDefault(dataset.borderWidth, index, rectangleElementOptions.borderWidth)
+				};
+
 				rectangle.pivot();
 			},
 
@@ -46318,12 +47513,11 @@
 				};
 			},
 
-			calculateBarWidth: function(index) {
+			calculateBarWidth: function(ruler) {
 				var xScale = this.getScaleForId(this.getMeta().xAxisID);
 				if (xScale.options.barThickness) {
 					return xScale.options.barThickness;
 				}
-				var ruler = this.getRuler(index);
 				return xScale.options.stacked ? ruler.categoryWidth : ruler.barWidth;
 			},
 
@@ -46342,13 +47536,11 @@
 				return barIndex;
 			},
 
-			calculateBarX: function(index, datasetIndex) {
+			calculateBarX: function(index, datasetIndex, ruler) {
 				var me = this;
 				var meta = me.getMeta();
 				var xScale = me.getScaleForId(meta.xAxisID);
 				var barIndex = me.getBarIndex(datasetIndex);
-
-				var ruler = me.getRuler(index);
 				var leftTick = xScale.getPixelForValue(null, index, datasetIndex, me.chart.isCombo);
 				leftTick -= me.chart.isCombo ? (ruler.tickWidth / 2) : 0;
 
@@ -46400,12 +47592,16 @@
 			draw: function(ease) {
 				var me = this;
 				var easingDecimal = ease || 1;
-				helpers.each(me.getMeta().data, function(rectangle, index) {
-					var d = me.getDataset().data[index];
+				var metaData = me.getMeta().data;
+				var dataset = me.getDataset();
+				var i, len;
+
+				for (i = 0, len = metaData.length; i < len; ++i) {
+					var d = dataset.data[i];
 					if (d !== null && d !== undefined && !isNaN(d)) {
-						rectangle.transition(easingDecimal).draw();
+						metaData[i].transition(easingDecimal).draw();
 					}
-				}, me);
+				}
 			},
 
 			setHoverStyle: function(rectangle) {
@@ -46500,103 +47696,84 @@
 				var dataset = me.getDataset();
 				var rectangleElementOptions = me.chart.options.elements.rectangle;
 
-				helpers.extend(rectangle, {
-					// Utility
-					_xScale: xScale,
-					_yScale: yScale,
-					_datasetIndex: me.index,
-					_index: index,
+				rectangle._xScale = xScale;
+				rectangle._yScale = yScale;
+				rectangle._datasetIndex = me.index;
+				rectangle._index = index;
 
-					// Desired view properties
-					_model: {
-						x: reset ? scaleBase : me.calculateBarX(index, me.index),
-						y: me.calculateBarY(index, me.index),
+				var ruler = me.getRuler(index);
+				rectangle._model = {
+					x: reset ? scaleBase : me.calculateBarX(index, me.index),
+					y: me.calculateBarY(index, me.index, ruler),
 
-						// Tooltip
-						label: me.chart.data.labels[index],
-						datasetLabel: dataset.label,
+					// Tooltip
+					label: me.chart.data.labels[index],
+					datasetLabel: dataset.label,
 
-						// Appearance
-						base: reset ? scaleBase : me.calculateBarBase(me.index, index),
-						height: me.calculateBarHeight(index),
-						backgroundColor: custom.backgroundColor ? custom.backgroundColor : helpers.getValueAtIndexOrDefault(dataset.backgroundColor, index, rectangleElementOptions.backgroundColor),
-						borderSkipped: custom.borderSkipped ? custom.borderSkipped : rectangleElementOptions.borderSkipped,
-						borderColor: custom.borderColor ? custom.borderColor : helpers.getValueAtIndexOrDefault(dataset.borderColor, index, rectangleElementOptions.borderColor),
-						borderWidth: custom.borderWidth ? custom.borderWidth : helpers.getValueAtIndexOrDefault(dataset.borderWidth, index, rectangleElementOptions.borderWidth)
-					},
+					// Appearance
+					base: reset ? scaleBase : me.calculateBarBase(me.index, index),
+					height: me.calculateBarHeight(ruler),
+					backgroundColor: custom.backgroundColor ? custom.backgroundColor : helpers.getValueAtIndexOrDefault(dataset.backgroundColor, index, rectangleElementOptions.backgroundColor),
+					borderSkipped: custom.borderSkipped ? custom.borderSkipped : rectangleElementOptions.borderSkipped,
+					borderColor: custom.borderColor ? custom.borderColor : helpers.getValueAtIndexOrDefault(dataset.borderColor, index, rectangleElementOptions.borderColor),
+					borderWidth: custom.borderWidth ? custom.borderWidth : helpers.getValueAtIndexOrDefault(dataset.borderWidth, index, rectangleElementOptions.borderWidth)
+				};
+				rectangle.draw = function() {
+					var ctx = this._chart.ctx;
+					var vm = this._view;
 
-					draw: function() {
-						var ctx = this._chart.ctx;
-						var vm = this._view;
+					var halfHeight = vm.height / 2,
+						topY = vm.y - halfHeight,
+						bottomY = vm.y + halfHeight,
+						right = vm.base - (vm.base - vm.x),
+						halfStroke = vm.borderWidth / 2;
 
-						var halfHeight = vm.height / 2,
-							topY = vm.y - halfHeight,
-							bottomY = vm.y + halfHeight,
-							right = vm.base - (vm.base - vm.x),
-							halfStroke = vm.borderWidth / 2;
-
-						// Canvas doesn't allow us to stroke inside the width so we can
-						// adjust the sizes to fit if we're setting a stroke on the line
-						if (vm.borderWidth) {
-							topY += halfStroke;
-							bottomY -= halfStroke;
-							right += halfStroke;
-						}
-
-						ctx.beginPath();
-
-						ctx.fillStyle = vm.backgroundColor;
-						ctx.strokeStyle = vm.borderColor;
-						ctx.lineWidth = vm.borderWidth;
-
-						// Corner points, from bottom-left to bottom-right clockwise
-						// | 1 2 |
-						// | 0 3 |
-						var corners = [
-							[vm.base, bottomY],
-							[vm.base, topY],
-							[right, topY],
-							[right, bottomY]
-						];
-
-						// Find first (starting) corner with fallback to 'bottom'
-						var borders = ['bottom', 'left', 'top', 'right'];
-						var startCorner = borders.indexOf(vm.borderSkipped, 0);
-						if (startCorner === -1) {
-							startCorner = 0;
-						}
-
-						function cornerAt(cornerIndex) {
-							return corners[(startCorner + cornerIndex) % 4];
-						}
-
-						// Draw rectangle from 'startCorner'
-						ctx.moveTo.apply(ctx, cornerAt(0));
-						for (var i = 1; i < 4; i++) {
-							ctx.lineTo.apply(ctx, cornerAt(i));
-						}
-
-						ctx.fill();
-						if (vm.borderWidth) {
-							ctx.stroke();
-						}
-					},
-
-					inRange: function(mouseX, mouseY) {
-						var vm = this._view;
-						var inRange = false;
-
-						if (vm) {
-							if (vm.x < vm.base) {
-								inRange = (mouseY >= vm.y - vm.height / 2 && mouseY <= vm.y + vm.height / 2) && (mouseX >= vm.x && mouseX <= vm.base);
-							} else {
-								inRange = (mouseY >= vm.y - vm.height / 2 && mouseY <= vm.y + vm.height / 2) && (mouseX >= vm.base && mouseX <= vm.x);
-							}
-						}
-
-						return inRange;
+					// Canvas doesn't allow us to stroke inside the width so we can
+					// adjust the sizes to fit if we're setting a stroke on the line
+					if (vm.borderWidth) {
+						topY += halfStroke;
+						bottomY -= halfStroke;
+						right += halfStroke;
 					}
-				});
+
+					ctx.beginPath();
+
+					ctx.fillStyle = vm.backgroundColor;
+					ctx.strokeStyle = vm.borderColor;
+					ctx.lineWidth = vm.borderWidth;
+
+					// Corner points, from bottom-left to bottom-right clockwise
+					// | 1 2 |
+					// | 0 3 |
+					var corners = [
+						[vm.base, bottomY],
+						[vm.base, topY],
+						[right, topY],
+						[right, bottomY]
+					];
+
+					// Find first (starting) corner with fallback to 'bottom'
+					var borders = ['bottom', 'left', 'top', 'right'];
+					var startCorner = borders.indexOf(vm.borderSkipped, 0);
+					if (startCorner === -1) {
+						startCorner = 0;
+					}
+
+					function cornerAt(cornerIndex) {
+						return corners[(startCorner + cornerIndex) % 4];
+					}
+
+					// Draw rectangle from 'startCorner'
+					ctx.moveTo.apply(ctx, cornerAt(0));
+					for (var i = 1; i < 4; i++) {
+						ctx.lineTo.apply(ctx, cornerAt(i));
+					}
+
+					ctx.fill();
+					if (vm.borderWidth) {
+						ctx.stroke();
+					}
+				};
 
 				rectangle.pivot();
 			},
@@ -46663,13 +47840,12 @@
 				};
 			},
 
-			calculateBarHeight: function(index) {
+			calculateBarHeight: function(ruler) {
 				var me = this;
 				var yScale = me.getScaleForId(me.getMeta().yAxisID);
 				if (yScale.options.barThickness) {
 					return yScale.options.barThickness;
 				}
-				var ruler = me.getRuler(index);
 				return yScale.options.stacked ? ruler.categoryHeight : ruler.barHeight;
 			},
 
@@ -46706,13 +47882,11 @@
 				return xScale.getPixelForValue(value);
 			},
 
-			calculateBarY: function(index, datasetIndex) {
+			calculateBarY: function(index, datasetIndex, ruler) {
 				var me = this;
 				var meta = me.getMeta();
 				var yScale = me.getScaleForId(meta.yAxisID);
 				var barIndex = me.getBarIndex(datasetIndex);
-
-				var ruler = me.getRuler(index);
 				var topTick = yScale.getPixelForValue(null, index, datasetIndex, me.chart.isCombo);
 				topTick -= me.chart.isCombo ? (ruler.tickHeight / 2) : 0;
 
@@ -46732,7 +47906,7 @@
 
 
 /***/ },
-/* 326 */
+/* 328 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -46768,7 +47942,7 @@
 					label: function(tooltipItem, data) {
 						var datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
 						var dataPoint = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
-						return datasetLabel + ': (' + dataPoint.x + ', ' + dataPoint.y + ', ' + dataPoint.r + ')';
+						return datasetLabel + ': (' + tooltipItem.xLabel + ', ' + tooltipItem.yLabel + ', ' + dataPoint.r + ')';
 					}
 				}
 			}
@@ -46860,7 +48034,7 @@
 
 
 /***/ },
-/* 327 */
+/* 329 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -46967,7 +48141,19 @@
 						return '';
 					},
 					label: function(tooltipItem, data) {
-						return data.labels[tooltipItem.index] + ': ' + data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
+						var dataLabel = data.labels[tooltipItem.index];
+						var value = ': ' + data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index];
+
+						if (helpers.isArray(dataLabel)) {
+							// show value on first line of multiline label
+							// need to clone because we are changing the value
+							dataLabel = dataLabel.slice();
+							dataLabel[0] += value;
+						} else {
+							dataLabel += value;
+						}
+
+						return dataLabel;
 					}
 				}
 			}
@@ -47157,7 +48343,7 @@
 
 
 /***/ },
-/* 328 */
+/* 330 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47196,19 +48382,6 @@
 
 			dataElementType: Chart.elements.Point,
 
-			addElementAndReset: function(index) {
-				var me = this;
-				var options = me.chart.options;
-				var meta = me.getMeta();
-
-				Chart.DatasetController.prototype.addElementAndReset.call(me, index);
-
-				// Make sure bezier control points are updated
-				if (lineEnabled(me.getDataset(), options) && meta.dataset._model.tension !== 0) {
-					me.updateBezierControlPoints();
-				}
-			},
-
 			update: function(reset) {
 				var me = this;
 				var meta = me.getMeta();
@@ -47240,7 +48413,7 @@
 						// Appearance
 						// The default behavior of lines is to break at null values, according
 						// to https://github.com/chartjs/Chart.js/issues/2435#issuecomment-216718158
-						// This option gives linse the ability to span gaps
+						// This option gives lines the ability to span gaps
 						spanGaps: dataset.spanGaps ? dataset.spanGaps : options.spanGaps,
 						tension: custom.tension ? custom.tension : helpers.getValueOrDefault(dataset.lineTension, lineElementOptions.tension),
 						backgroundColor: custom.backgroundColor ? custom.backgroundColor : (dataset.backgroundColor || lineElementOptions.backgroundColor),
@@ -47513,7 +48686,7 @@
 
 
 /***/ },
-/* 329 */
+/* 331 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47550,11 +48723,11 @@
 
 				if (datasets.length) {
 					for (var i = 0; i < datasets[0].data.length; ++i) {
-						text.push('<li><span style="background-color:' + datasets[0].backgroundColor[i] + '">');
+						text.push('<li><span style="background-color:' + datasets[0].backgroundColor[i] + '"></span>');
 						if (labels[i]) {
 							text.push(labels[i]);
 						}
-						text.push('</span></li>');
+						text.push('</li>');
 					}
 				}
 
@@ -47734,7 +48907,7 @@
 
 
 /***/ },
-/* 330 */
+/* 332 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47744,6 +48917,7 @@
 		var helpers = Chart.helpers;
 
 		Chart.defaults.radar = {
+			aspectRatio: 1,
 			scale: {
 				type: 'radialLinear'
 			},
@@ -47761,13 +48935,6 @@
 			dataElementType: Chart.elements.Point,
 
 			linkScales: helpers.noop,
-
-			addElementAndReset: function(index) {
-				Chart.DatasetController.prototype.addElementAndReset.call(this, index);
-
-				// Make sure bezier control points are updated
-				this.updateBezierControlPoints();
-			},
 
 			update: function(reset) {
 				var me = this;
@@ -47816,7 +48983,6 @@
 				helpers.each(points, function(point, index) {
 					me.updateElement(point, index, reset);
 				}, me);
-
 
 				// Update bezier control points
 				me.updateBezierControlPoints();
@@ -47928,7 +49094,7 @@
 
 
 /***/ },
-/* 331 */
+/* 333 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47945,7 +49111,7 @@
 
 
 /***/ },
-/* 332 */
+/* 334 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47961,7 +49127,7 @@
 
 
 /***/ },
-/* 333 */
+/* 335 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47978,7 +49144,7 @@
 
 
 /***/ },
-/* 334 */
+/* 336 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -47995,7 +49161,7 @@
 
 
 /***/ },
-/* 335 */
+/* 337 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -48012,7 +49178,7 @@
 
 
 /***/ },
-/* 336 */
+/* 338 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -48020,7 +49186,6 @@
 	module.exports = function(Chart) {
 
 		Chart.Radar = function(context, config) {
-			config.options = Chart.helpers.configMerge({aspectRatio: 1}, config.options);
 			config.type = 'radar';
 
 			return new Chart(context, config);
@@ -48030,7 +49195,7 @@
 
 
 /***/ },
-/* 337 */
+/* 339 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -48083,13 +49248,13 @@
 
 
 /***/ },
-/* 338 */
+/* 340 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, module) {/**
-	 * lodash (Custom Build) <https://lodash.com/>
+	 * Lodash (Custom Build) <https://lodash.com/>
 	 * Build: `lodash modularize exports="npm" -o ./`
-	 * Copyright jQuery Foundation and other contributors <https://jquery.org/>
+	 * Copyright JS Foundation and other contributors <https://js.foundation/>
 	 * Released under MIT license <https://lodash.com/license>
 	 * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
 	 * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -48101,9 +49266,9 @@
 	/** Used to stand-in for `undefined` hash values. */
 	var HASH_UNDEFINED = '__lodash_hash_undefined__';
 
-	/** Used to compose bitmasks for comparison styles. */
-	var UNORDERED_COMPARE_FLAG = 1,
-	    PARTIAL_COMPARE_FLAG = 2;
+	/** Used to compose bitmasks for value comparisons. */
+	var COMPARE_PARTIAL_FLAG = 1,
+	    COMPARE_UNORDERED_FLAG = 2;
 
 	/** Used as references for various `Number` constants. */
 	var MAX_SAFE_INTEGER = 9007199254740991;
@@ -48111,6 +49276,7 @@
 	/** `Object#toString` result references. */
 	var argsTag = '[object Arguments]',
 	    arrayTag = '[object Array]',
+	    asyncTag = '[object AsyncFunction]',
 	    boolTag = '[object Boolean]',
 	    dateTag = '[object Date]',
 	    errorTag = '[object Error]',
@@ -48118,12 +49284,15 @@
 	    genTag = '[object GeneratorFunction]',
 	    mapTag = '[object Map]',
 	    numberTag = '[object Number]',
+	    nullTag = '[object Null]',
 	    objectTag = '[object Object]',
 	    promiseTag = '[object Promise]',
+	    proxyTag = '[object Proxy]',
 	    regexpTag = '[object RegExp]',
 	    setTag = '[object Set]',
 	    stringTag = '[object String]',
 	    symbolTag = '[object Symbol]',
+	    undefinedTag = '[object Undefined]',
 	    weakMapTag = '[object WeakMap]';
 
 	var arrayBufferTag = '[object ArrayBuffer]',
@@ -48190,12 +49359,55 @@
 	/** Used to access faster Node.js helpers. */
 	var nodeUtil = (function() {
 	  try {
-	    return freeProcess && freeProcess.binding('util');
+	    return freeProcess && freeProcess.binding && freeProcess.binding('util');
 	  } catch (e) {}
 	}());
 
 	/* Node.js helper references. */
 	var nodeIsTypedArray = nodeUtil && nodeUtil.isTypedArray;
+
+	/**
+	 * A specialized version of `_.filter` for arrays without support for
+	 * iteratee shorthands.
+	 *
+	 * @private
+	 * @param {Array} [array] The array to iterate over.
+	 * @param {Function} predicate The function invoked per iteration.
+	 * @returns {Array} Returns the new filtered array.
+	 */
+	function arrayFilter(array, predicate) {
+	  var index = -1,
+	      length = array == null ? 0 : array.length,
+	      resIndex = 0,
+	      result = [];
+
+	  while (++index < length) {
+	    var value = array[index];
+	    if (predicate(value, index, array)) {
+	      result[resIndex++] = value;
+	    }
+	  }
+	  return result;
+	}
+
+	/**
+	 * Appends the elements of `values` to `array`.
+	 *
+	 * @private
+	 * @param {Array} array The array to modify.
+	 * @param {Array} values The values to append.
+	 * @returns {Array} Returns `array`.
+	 */
+	function arrayPush(array, values) {
+	  var index = -1,
+	      length = values.length,
+	      offset = array.length;
+
+	  while (++index < length) {
+	    array[offset + index] = values[index];
+	  }
+	  return array;
+	}
 
 	/**
 	 * A specialized version of `_.some` for arrays without support for iteratee
@@ -48209,7 +49421,7 @@
 	 */
 	function arraySome(array, predicate) {
 	  var index = -1,
-	      length = array ? array.length : 0;
+	      length = array == null ? 0 : array.length;
 
 	  while (++index < length) {
 	    if (predicate(array[index], index, array)) {
@@ -48252,6 +49464,18 @@
 	}
 
 	/**
+	 * Checks if a `cache` value for `key` exists.
+	 *
+	 * @private
+	 * @param {Object} cache The cache to query.
+	 * @param {string} key The key of the entry to check.
+	 * @returns {boolean} Returns `true` if an entry for `key` exists, else `false`.
+	 */
+	function cacheHas(cache, key) {
+	  return cache.has(key);
+	}
+
+	/**
 	 * Gets the value at `key` of `object`.
 	 *
 	 * @private
@@ -48261,25 +49485,6 @@
 	 */
 	function getValue(object, key) {
 	  return object == null ? undefined : object[key];
-	}
-
-	/**
-	 * Checks if `value` is a host object in IE < 9.
-	 *
-	 * @private
-	 * @param {*} value The value to check.
-	 * @returns {boolean} Returns `true` if `value` is a host object, else `false`.
-	 */
-	function isHostObject(value) {
-	  // Many host objects are `Object` objects that can coerce to strings
-	  // despite having improperly defined `toString` methods.
-	  var result = false;
-	  if (value != null && typeof value.toString != 'function') {
-	    try {
-	      result = !!(value + '');
-	    } catch (e) {}
-	  }
-	  return result;
 	}
 
 	/**
@@ -48338,24 +49543,24 @@
 	/** Used to detect overreaching core-js shims. */
 	var coreJsData = root['__core-js_shared__'];
 
-	/** Used to detect methods masquerading as native. */
-	var maskSrcKey = (function() {
-	  var uid = /[^.]+$/.exec(coreJsData && coreJsData.keys && coreJsData.keys.IE_PROTO || '');
-	  return uid ? ('Symbol(src)_1.' + uid) : '';
-	}());
-
 	/** Used to resolve the decompiled source of functions. */
 	var funcToString = funcProto.toString;
 
 	/** Used to check objects for own properties. */
 	var hasOwnProperty = objectProto.hasOwnProperty;
 
+	/** Used to detect methods masquerading as native. */
+	var maskSrcKey = (function() {
+	  var uid = /[^.]+$/.exec(coreJsData && coreJsData.keys && coreJsData.keys.IE_PROTO || '');
+	  return uid ? ('Symbol(src)_1.' + uid) : '';
+	}());
+
 	/**
 	 * Used to resolve the
 	 * [`toStringTag`](http://ecma-international.org/ecma-262/7.0/#sec-object.prototype.tostring)
 	 * of values.
 	 */
-	var objectToString = objectProto.toString;
+	var nativeObjectToString = objectProto.toString;
 
 	/** Used to detect if a method is native. */
 	var reIsNative = RegExp('^' +
@@ -48364,13 +49569,17 @@
 	);
 
 	/** Built-in value references. */
-	var Symbol = root.Symbol,
+	var Buffer = moduleExports ? root.Buffer : undefined,
+	    Symbol = root.Symbol,
 	    Uint8Array = root.Uint8Array,
 	    propertyIsEnumerable = objectProto.propertyIsEnumerable,
-	    splice = arrayProto.splice;
+	    splice = arrayProto.splice,
+	    symToStringTag = Symbol ? Symbol.toStringTag : undefined;
 
 	/* Built-in method references for those with the same name as other `lodash` methods. */
-	var nativeKeys = overArg(Object.keys, Object);
+	var nativeGetSymbols = Object.getOwnPropertySymbols,
+	    nativeIsBuffer = Buffer ? Buffer.isBuffer : undefined,
+	    nativeKeys = overArg(Object.keys, Object);
 
 	/* Built-in method references that are verified to be native. */
 	var DataView = getNative(root, 'DataView'),
@@ -48400,7 +49609,7 @@
 	 */
 	function Hash(entries) {
 	  var index = -1,
-	      length = entries ? entries.length : 0;
+	      length = entries == null ? 0 : entries.length;
 
 	  this.clear();
 	  while (++index < length) {
@@ -48418,6 +49627,7 @@
 	 */
 	function hashClear() {
 	  this.__data__ = nativeCreate ? nativeCreate(null) : {};
+	  this.size = 0;
 	}
 
 	/**
@@ -48431,7 +49641,9 @@
 	 * @returns {boolean} Returns `true` if the entry was removed, else `false`.
 	 */
 	function hashDelete(key) {
-	  return this.has(key) && delete this.__data__[key];
+	  var result = this.has(key) && delete this.__data__[key];
+	  this.size -= result ? 1 : 0;
+	  return result;
 	}
 
 	/**
@@ -48463,7 +49675,7 @@
 	 */
 	function hashHas(key) {
 	  var data = this.__data__;
-	  return nativeCreate ? data[key] !== undefined : hasOwnProperty.call(data, key);
+	  return nativeCreate ? (data[key] !== undefined) : hasOwnProperty.call(data, key);
 	}
 
 	/**
@@ -48478,6 +49690,7 @@
 	 */
 	function hashSet(key, value) {
 	  var data = this.__data__;
+	  this.size += this.has(key) ? 0 : 1;
 	  data[key] = (nativeCreate && value === undefined) ? HASH_UNDEFINED : value;
 	  return this;
 	}
@@ -48498,7 +49711,7 @@
 	 */
 	function ListCache(entries) {
 	  var index = -1,
-	      length = entries ? entries.length : 0;
+	      length = entries == null ? 0 : entries.length;
 
 	  this.clear();
 	  while (++index < length) {
@@ -48516,6 +49729,7 @@
 	 */
 	function listCacheClear() {
 	  this.__data__ = [];
+	  this.size = 0;
 	}
 
 	/**
@@ -48540,6 +49754,7 @@
 	  } else {
 	    splice.call(data, index, 1);
 	  }
+	  --this.size;
 	  return true;
 	}
 
@@ -48587,6 +49802,7 @@
 	      index = assocIndexOf(data, key);
 
 	  if (index < 0) {
+	    ++this.size;
 	    data.push([key, value]);
 	  } else {
 	    data[index][1] = value;
@@ -48610,7 +49826,7 @@
 	 */
 	function MapCache(entries) {
 	  var index = -1,
-	      length = entries ? entries.length : 0;
+	      length = entries == null ? 0 : entries.length;
 
 	  this.clear();
 	  while (++index < length) {
@@ -48627,6 +49843,7 @@
 	 * @memberOf MapCache
 	 */
 	function mapCacheClear() {
+	  this.size = 0;
 	  this.__data__ = {
 	    'hash': new Hash,
 	    'map': new (Map || ListCache),
@@ -48644,7 +49861,9 @@
 	 * @returns {boolean} Returns `true` if the entry was removed, else `false`.
 	 */
 	function mapCacheDelete(key) {
-	  return getMapData(this, key)['delete'](key);
+	  var result = getMapData(this, key)['delete'](key);
+	  this.size -= result ? 1 : 0;
+	  return result;
 	}
 
 	/**
@@ -48684,7 +49903,11 @@
 	 * @returns {Object} Returns the map cache instance.
 	 */
 	function mapCacheSet(key, value) {
-	  getMapData(this, key).set(key, value);
+	  var data = getMapData(this, key),
+	      size = data.size;
+
+	  data.set(key, value);
+	  this.size += data.size == size ? 0 : 1;
 	  return this;
 	}
 
@@ -48705,7 +49928,7 @@
 	 */
 	function SetCache(values) {
 	  var index = -1,
-	      length = values ? values.length : 0;
+	      length = values == null ? 0 : values.length;
 
 	  this.__data__ = new MapCache;
 	  while (++index < length) {
@@ -48753,7 +49976,8 @@
 	 * @param {Array} [entries] The key-value pairs to cache.
 	 */
 	function Stack(entries) {
-	  this.__data__ = new ListCache(entries);
+	  var data = this.__data__ = new ListCache(entries);
+	  this.size = data.size;
 	}
 
 	/**
@@ -48765,6 +49989,7 @@
 	 */
 	function stackClear() {
 	  this.__data__ = new ListCache;
+	  this.size = 0;
 	}
 
 	/**
@@ -48777,7 +50002,11 @@
 	 * @returns {boolean} Returns `true` if the entry was removed, else `false`.
 	 */
 	function stackDelete(key) {
-	  return this.__data__['delete'](key);
+	  var data = this.__data__,
+	      result = data['delete'](key);
+
+	  this.size = data.size;
+	  return result;
 	}
 
 	/**
@@ -48817,16 +50046,18 @@
 	 * @returns {Object} Returns the stack cache instance.
 	 */
 	function stackSet(key, value) {
-	  var cache = this.__data__;
-	  if (cache instanceof ListCache) {
-	    var pairs = cache.__data__;
+	  var data = this.__data__;
+	  if (data instanceof ListCache) {
+	    var pairs = data.__data__;
 	    if (!Map || (pairs.length < LARGE_ARRAY_SIZE - 1)) {
 	      pairs.push([key, value]);
+	      this.size = ++data.size;
 	      return this;
 	    }
-	    cache = this.__data__ = new MapCache(pairs);
+	    data = this.__data__ = new MapCache(pairs);
 	  }
-	  cache.set(key, value);
+	  data.set(key, value);
+	  this.size = data.size;
 	  return this;
 	}
 
@@ -48846,18 +50077,26 @@
 	 * @returns {Array} Returns the array of property names.
 	 */
 	function arrayLikeKeys(value, inherited) {
-	  // Safari 8.1 makes `arguments.callee` enumerable in strict mode.
-	  // Safari 9 makes `arguments.length` enumerable in strict mode.
-	  var result = (isArray(value) || isArguments(value))
-	    ? baseTimes(value.length, String)
-	    : [];
-
-	  var length = result.length,
-	      skipIndexes = !!length;
+	  var isArr = isArray(value),
+	      isArg = !isArr && isArguments(value),
+	      isBuff = !isArr && !isArg && isBuffer(value),
+	      isType = !isArr && !isArg && !isBuff && isTypedArray(value),
+	      skipIndexes = isArr || isArg || isBuff || isType,
+	      result = skipIndexes ? baseTimes(value.length, String) : [],
+	      length = result.length;
 
 	  for (var key in value) {
 	    if ((inherited || hasOwnProperty.call(value, key)) &&
-	        !(skipIndexes && (key == 'length' || isIndex(key, length)))) {
+	        !(skipIndexes && (
+	           // Safari 9 has enumerable `arguments.length` in strict mode.
+	           key == 'length' ||
+	           // Node.js 0.10 has enumerable non-index properties on buffers.
+	           (isBuff && (key == 'offset' || key == 'parent')) ||
+	           // PhantomJS 2 has enumerable non-index properties on typed arrays.
+	           (isType && (key == 'buffer' || key == 'byteLength' || key == 'byteOffset')) ||
+	           // Skip index properties.
+	           isIndex(key, length)
+	        ))) {
 	      result.push(key);
 	    }
 	  }
@@ -48883,14 +50122,46 @@
 	}
 
 	/**
-	 * The base implementation of `getTag`.
+	 * The base implementation of `getAllKeys` and `getAllKeysIn` which uses
+	 * `keysFunc` and `symbolsFunc` to get the enumerable property names and
+	 * symbols of `object`.
+	 *
+	 * @private
+	 * @param {Object} object The object to query.
+	 * @param {Function} keysFunc The function to get the keys of `object`.
+	 * @param {Function} symbolsFunc The function to get the symbols of `object`.
+	 * @returns {Array} Returns the array of property names and symbols.
+	 */
+	function baseGetAllKeys(object, keysFunc, symbolsFunc) {
+	  var result = keysFunc(object);
+	  return isArray(object) ? result : arrayPush(result, symbolsFunc(object));
+	}
+
+	/**
+	 * The base implementation of `getTag` without fallbacks for buggy environments.
 	 *
 	 * @private
 	 * @param {*} value The value to query.
 	 * @returns {string} Returns the `toStringTag`.
 	 */
 	function baseGetTag(value) {
-	  return objectToString.call(value);
+	  if (value == null) {
+	    return value === undefined ? undefinedTag : nullTag;
+	  }
+	  return (symToStringTag && symToStringTag in Object(value))
+	    ? getRawTag(value)
+	    : objectToString(value);
+	}
+
+	/**
+	 * The base implementation of `_.isArguments`.
+	 *
+	 * @private
+	 * @param {*} value The value to check.
+	 * @returns {boolean} Returns `true` if `value` is an `arguments` object,
+	 */
+	function baseIsArguments(value) {
+	  return isObjectLike(value) && baseGetTag(value) == argsTag;
 	}
 
 	/**
@@ -48900,22 +50171,21 @@
 	 * @private
 	 * @param {*} value The value to compare.
 	 * @param {*} other The other value to compare.
+	 * @param {boolean} bitmask The bitmask flags.
+	 *  1 - Unordered comparison
+	 *  2 - Partial comparison
 	 * @param {Function} [customizer] The function to customize comparisons.
-	 * @param {boolean} [bitmask] The bitmask of comparison flags.
-	 *  The bitmask may be composed of the following flags:
-	 *     1 - Unordered comparison
-	 *     2 - Partial comparison
 	 * @param {Object} [stack] Tracks traversed `value` and `other` objects.
 	 * @returns {boolean} Returns `true` if the values are equivalent, else `false`.
 	 */
-	function baseIsEqual(value, other, customizer, bitmask, stack) {
+	function baseIsEqual(value, other, bitmask, customizer, stack) {
 	  if (value === other) {
 	    return true;
 	  }
-	  if (value == null || other == null || (!isObject(value) && !isObjectLike(other))) {
+	  if (value == null || other == null || (!isObjectLike(value) && !isObjectLike(other))) {
 	    return value !== value && other !== other;
 	  }
-	  return baseIsEqualDeep(value, other, baseIsEqual, customizer, bitmask, stack);
+	  return baseIsEqualDeep(value, other, bitmask, customizer, baseIsEqual, stack);
 	}
 
 	/**
@@ -48926,38 +50196,39 @@
 	 * @private
 	 * @param {Object} object The object to compare.
 	 * @param {Object} other The other object to compare.
+	 * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
+	 * @param {Function} customizer The function to customize comparisons.
 	 * @param {Function} equalFunc The function to determine equivalents of values.
-	 * @param {Function} [customizer] The function to customize comparisons.
-	 * @param {number} [bitmask] The bitmask of comparison flags. See `baseIsEqual`
-	 *  for more details.
 	 * @param {Object} [stack] Tracks traversed `object` and `other` objects.
 	 * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
 	 */
-	function baseIsEqualDeep(object, other, equalFunc, customizer, bitmask, stack) {
+	function baseIsEqualDeep(object, other, bitmask, customizer, equalFunc, stack) {
 	  var objIsArr = isArray(object),
 	      othIsArr = isArray(other),
-	      objTag = arrayTag,
-	      othTag = arrayTag;
+	      objTag = objIsArr ? arrayTag : getTag(object),
+	      othTag = othIsArr ? arrayTag : getTag(other);
 
-	  if (!objIsArr) {
-	    objTag = getTag(object);
-	    objTag = objTag == argsTag ? objectTag : objTag;
-	  }
-	  if (!othIsArr) {
-	    othTag = getTag(other);
-	    othTag = othTag == argsTag ? objectTag : othTag;
-	  }
-	  var objIsObj = objTag == objectTag && !isHostObject(object),
-	      othIsObj = othTag == objectTag && !isHostObject(other),
+	  objTag = objTag == argsTag ? objectTag : objTag;
+	  othTag = othTag == argsTag ? objectTag : othTag;
+
+	  var objIsObj = objTag == objectTag,
+	      othIsObj = othTag == objectTag,
 	      isSameTag = objTag == othTag;
 
+	  if (isSameTag && isBuffer(object)) {
+	    if (!isBuffer(other)) {
+	      return false;
+	    }
+	    objIsArr = true;
+	    objIsObj = false;
+	  }
 	  if (isSameTag && !objIsObj) {
 	    stack || (stack = new Stack);
 	    return (objIsArr || isTypedArray(object))
-	      ? equalArrays(object, other, equalFunc, customizer, bitmask, stack)
-	      : equalByTag(object, other, objTag, equalFunc, customizer, bitmask, stack);
+	      ? equalArrays(object, other, bitmask, customizer, equalFunc, stack)
+	      : equalByTag(object, other, objTag, bitmask, customizer, equalFunc, stack);
 	  }
-	  if (!(bitmask & PARTIAL_COMPARE_FLAG)) {
+	  if (!(bitmask & COMPARE_PARTIAL_FLAG)) {
 	    var objIsWrapped = objIsObj && hasOwnProperty.call(object, '__wrapped__'),
 	        othIsWrapped = othIsObj && hasOwnProperty.call(other, '__wrapped__');
 
@@ -48966,14 +50237,14 @@
 	          othUnwrapped = othIsWrapped ? other.value() : other;
 
 	      stack || (stack = new Stack);
-	      return equalFunc(objUnwrapped, othUnwrapped, customizer, bitmask, stack);
+	      return equalFunc(objUnwrapped, othUnwrapped, bitmask, customizer, stack);
 	    }
 	  }
 	  if (!isSameTag) {
 	    return false;
 	  }
 	  stack || (stack = new Stack);
-	  return equalObjects(object, other, equalFunc, customizer, bitmask, stack);
+	  return equalObjects(object, other, bitmask, customizer, equalFunc, stack);
 	}
 
 	/**
@@ -48988,7 +50259,7 @@
 	  if (!isObject(value) || isMasked(value)) {
 	    return false;
 	  }
-	  var pattern = (isFunction(value) || isHostObject(value)) ? reIsNative : reIsHostCtor;
+	  var pattern = isFunction(value) ? reIsNative : reIsHostCtor;
 	  return pattern.test(toSource(value));
 	}
 
@@ -49001,7 +50272,7 @@
 	 */
 	function baseIsTypedArray(value) {
 	  return isObjectLike(value) &&
-	    isLength(value.length) && !!typedArrayTags[objectToString.call(value)];
+	    isLength(value.length) && !!typedArrayTags[baseGetTag(value)];
 	}
 
 	/**
@@ -49031,15 +50302,14 @@
 	 * @private
 	 * @param {Array} array The array to compare.
 	 * @param {Array} other The other array to compare.
-	 * @param {Function} equalFunc The function to determine equivalents of values.
+	 * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
 	 * @param {Function} customizer The function to customize comparisons.
-	 * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual`
-	 *  for more details.
+	 * @param {Function} equalFunc The function to determine equivalents of values.
 	 * @param {Object} stack Tracks traversed `array` and `other` objects.
 	 * @returns {boolean} Returns `true` if the arrays are equivalent, else `false`.
 	 */
-	function equalArrays(array, other, equalFunc, customizer, bitmask, stack) {
-	  var isPartial = bitmask & PARTIAL_COMPARE_FLAG,
+	function equalArrays(array, other, bitmask, customizer, equalFunc, stack) {
+	  var isPartial = bitmask & COMPARE_PARTIAL_FLAG,
 	      arrLength = array.length,
 	      othLength = other.length;
 
@@ -49053,7 +50323,7 @@
 	  }
 	  var index = -1,
 	      result = true,
-	      seen = (bitmask & UNORDERED_COMPARE_FLAG) ? new SetCache : undefined;
+	      seen = (bitmask & COMPARE_UNORDERED_FLAG) ? new SetCache : undefined;
 
 	  stack.set(array, other);
 	  stack.set(other, array);
@@ -49078,9 +50348,9 @@
 	    // Recursively compare arrays (susceptible to call stack limits).
 	    if (seen) {
 	      if (!arraySome(other, function(othValue, othIndex) {
-	            if (!seen.has(othIndex) &&
-	                (arrValue === othValue || equalFunc(arrValue, othValue, customizer, bitmask, stack))) {
-	              return seen.add(othIndex);
+	            if (!cacheHas(seen, othIndex) &&
+	                (arrValue === othValue || equalFunc(arrValue, othValue, bitmask, customizer, stack))) {
+	              return seen.push(othIndex);
 	            }
 	          })) {
 	        result = false;
@@ -49088,7 +50358,7 @@
 	      }
 	    } else if (!(
 	          arrValue === othValue ||
-	            equalFunc(arrValue, othValue, customizer, bitmask, stack)
+	            equalFunc(arrValue, othValue, bitmask, customizer, stack)
 	        )) {
 	      result = false;
 	      break;
@@ -49110,14 +50380,13 @@
 	 * @param {Object} object The object to compare.
 	 * @param {Object} other The other object to compare.
 	 * @param {string} tag The `toStringTag` of the objects to compare.
-	 * @param {Function} equalFunc The function to determine equivalents of values.
+	 * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
 	 * @param {Function} customizer The function to customize comparisons.
-	 * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual`
-	 *  for more details.
+	 * @param {Function} equalFunc The function to determine equivalents of values.
 	 * @param {Object} stack Tracks traversed `object` and `other` objects.
 	 * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
 	 */
-	function equalByTag(object, other, tag, equalFunc, customizer, bitmask, stack) {
+	function equalByTag(object, other, tag, bitmask, customizer, equalFunc, stack) {
 	  switch (tag) {
 	    case dataViewTag:
 	      if ((object.byteLength != other.byteLength) ||
@@ -49155,7 +50424,7 @@
 	      var convert = mapToArray;
 
 	    case setTag:
-	      var isPartial = bitmask & PARTIAL_COMPARE_FLAG;
+	      var isPartial = bitmask & COMPARE_PARTIAL_FLAG;
 	      convert || (convert = setToArray);
 
 	      if (object.size != other.size && !isPartial) {
@@ -49166,11 +50435,11 @@
 	      if (stacked) {
 	        return stacked == other;
 	      }
-	      bitmask |= UNORDERED_COMPARE_FLAG;
+	      bitmask |= COMPARE_UNORDERED_FLAG;
 
 	      // Recursively compare objects (susceptible to call stack limits).
 	      stack.set(object, other);
-	      var result = equalArrays(convert(object), convert(other), equalFunc, customizer, bitmask, stack);
+	      var result = equalArrays(convert(object), convert(other), bitmask, customizer, equalFunc, stack);
 	      stack['delete'](object);
 	      return result;
 
@@ -49189,18 +50458,17 @@
 	 * @private
 	 * @param {Object} object The object to compare.
 	 * @param {Object} other The other object to compare.
-	 * @param {Function} equalFunc The function to determine equivalents of values.
+	 * @param {number} bitmask The bitmask flags. See `baseIsEqual` for more details.
 	 * @param {Function} customizer The function to customize comparisons.
-	 * @param {number} bitmask The bitmask of comparison flags. See `baseIsEqual`
-	 *  for more details.
+	 * @param {Function} equalFunc The function to determine equivalents of values.
 	 * @param {Object} stack Tracks traversed `object` and `other` objects.
 	 * @returns {boolean} Returns `true` if the objects are equivalent, else `false`.
 	 */
-	function equalObjects(object, other, equalFunc, customizer, bitmask, stack) {
-	  var isPartial = bitmask & PARTIAL_COMPARE_FLAG,
-	      objProps = keys(object),
+	function equalObjects(object, other, bitmask, customizer, equalFunc, stack) {
+	  var isPartial = bitmask & COMPARE_PARTIAL_FLAG,
+	      objProps = getAllKeys(object),
 	      objLength = objProps.length,
-	      othProps = keys(other),
+	      othProps = getAllKeys(other),
 	      othLength = othProps.length;
 
 	  if (objLength != othLength && !isPartial) {
@@ -49235,7 +50503,7 @@
 	    }
 	    // Recursively compare objects (susceptible to call stack limits).
 	    if (!(compared === undefined
-	          ? (objValue === othValue || equalFunc(objValue, othValue, customizer, bitmask, stack))
+	          ? (objValue === othValue || equalFunc(objValue, othValue, bitmask, customizer, stack))
 	          : compared
 	        )) {
 	      result = false;
@@ -49258,6 +50526,17 @@
 	  stack['delete'](object);
 	  stack['delete'](other);
 	  return result;
+	}
+
+	/**
+	 * Creates an array of own enumerable property names and symbols of `object`.
+	 *
+	 * @private
+	 * @param {Object} object The object to query.
+	 * @returns {Array} Returns the array of property names and symbols.
+	 */
+	function getAllKeys(object) {
+	  return baseGetAllKeys(object, keys, getSymbols);
 	}
 
 	/**
@@ -49289,6 +50568,50 @@
 	}
 
 	/**
+	 * A specialized version of `baseGetTag` which ignores `Symbol.toStringTag` values.
+	 *
+	 * @private
+	 * @param {*} value The value to query.
+	 * @returns {string} Returns the raw `toStringTag`.
+	 */
+	function getRawTag(value) {
+	  var isOwn = hasOwnProperty.call(value, symToStringTag),
+	      tag = value[symToStringTag];
+
+	  try {
+	    value[symToStringTag] = undefined;
+	    var unmasked = true;
+	  } catch (e) {}
+
+	  var result = nativeObjectToString.call(value);
+	  if (unmasked) {
+	    if (isOwn) {
+	      value[symToStringTag] = tag;
+	    } else {
+	      delete value[symToStringTag];
+	    }
+	  }
+	  return result;
+	}
+
+	/**
+	 * Creates an array of the own enumerable symbols of `object`.
+	 *
+	 * @private
+	 * @param {Object} object The object to query.
+	 * @returns {Array} Returns the array of symbols.
+	 */
+	var getSymbols = !nativeGetSymbols ? stubArray : function(object) {
+	  if (object == null) {
+	    return [];
+	  }
+	  object = Object(object);
+	  return arrayFilter(nativeGetSymbols(object), function(symbol) {
+	    return propertyIsEnumerable.call(object, symbol);
+	  });
+	};
+
+	/**
 	 * Gets the `toStringTag` of `value`.
 	 *
 	 * @private
@@ -49297,17 +50620,16 @@
 	 */
 	var getTag = baseGetTag;
 
-	// Fallback for data views, maps, sets, and weak maps in IE 11,
-	// for data views in Edge < 14, and promises in Node.js.
+	// Fallback for data views, maps, sets, and weak maps in IE 11 and promises in Node.js < 6.
 	if ((DataView && getTag(new DataView(new ArrayBuffer(1))) != dataViewTag) ||
 	    (Map && getTag(new Map) != mapTag) ||
 	    (Promise && getTag(Promise.resolve()) != promiseTag) ||
 	    (Set && getTag(new Set) != setTag) ||
 	    (WeakMap && getTag(new WeakMap) != weakMapTag)) {
 	  getTag = function(value) {
-	    var result = objectToString.call(value),
+	    var result = baseGetTag(value),
 	        Ctor = result == objectTag ? value.constructor : undefined,
-	        ctorString = Ctor ? toSource(Ctor) : undefined;
+	        ctorString = Ctor ? toSource(Ctor) : '';
 
 	    if (ctorString) {
 	      switch (ctorString) {
@@ -49377,10 +50699,21 @@
 	}
 
 	/**
+	 * Converts `value` to a string using `Object.prototype.toString`.
+	 *
+	 * @private
+	 * @param {*} value The value to convert.
+	 * @returns {string} Returns the converted string.
+	 */
+	function objectToString(value) {
+	  return nativeObjectToString.call(value);
+	}
+
+	/**
 	 * Converts `func` to its source code.
 	 *
 	 * @private
-	 * @param {Function} func The function to process.
+	 * @param {Function} func The function to convert.
 	 * @returns {string} Returns the source code.
 	 */
 	function toSource(func) {
@@ -49449,11 +50782,10 @@
 	 * _.isArguments([1, 2, 3]);
 	 * // => false
 	 */
-	function isArguments(value) {
-	  // Safari 8.1 makes `arguments.callee` enumerable in strict mode.
-	  return isArrayLikeObject(value) && hasOwnProperty.call(value, 'callee') &&
-	    (!propertyIsEnumerable.call(value, 'callee') || objectToString.call(value) == argsTag);
-	}
+	var isArguments = baseIsArguments(function() { return arguments; }()) ? baseIsArguments : function(value) {
+	  return isObjectLike(value) && hasOwnProperty.call(value, 'callee') &&
+	    !propertyIsEnumerable.call(value, 'callee');
+	};
 
 	/**
 	 * Checks if `value` is classified as an `Array` object.
@@ -49510,33 +50842,23 @@
 	}
 
 	/**
-	 * This method is like `_.isArrayLike` except that it also checks if `value`
-	 * is an object.
+	 * Checks if `value` is a buffer.
 	 *
 	 * @static
 	 * @memberOf _
-	 * @since 4.0.0
+	 * @since 4.3.0
 	 * @category Lang
 	 * @param {*} value The value to check.
-	 * @returns {boolean} Returns `true` if `value` is an array-like object,
-	 *  else `false`.
+	 * @returns {boolean} Returns `true` if `value` is a buffer, else `false`.
 	 * @example
 	 *
-	 * _.isArrayLikeObject([1, 2, 3]);
+	 * _.isBuffer(new Buffer(2));
 	 * // => true
 	 *
-	 * _.isArrayLikeObject(document.body.children);
-	 * // => true
-	 *
-	 * _.isArrayLikeObject('abc');
-	 * // => false
-	 *
-	 * _.isArrayLikeObject(_.noop);
+	 * _.isBuffer(new Uint8Array(2));
 	 * // => false
 	 */
-	function isArrayLikeObject(value) {
-	  return isObjectLike(value) && isArrayLike(value);
-	}
+	var isBuffer = nativeIsBuffer || stubFalse;
 
 	/**
 	 * Performs a deep comparison between two values to determine if they are
@@ -49546,7 +50868,7 @@
 	 * date objects, error objects, maps, numbers, `Object` objects, regexes,
 	 * sets, strings, symbols, and typed arrays. `Object` objects are compared
 	 * by their own, not inherited, enumerable properties. Functions and DOM
-	 * nodes are **not** supported.
+	 * nodes are compared by strict equality, i.e. `===`.
 	 *
 	 * @static
 	 * @memberOf _
@@ -49588,10 +50910,13 @@
 	 * // => false
 	 */
 	function isFunction(value) {
+	  if (!isObject(value)) {
+	    return false;
+	  }
 	  // The use of `Object#toString` avoids issues with the `typeof` operator
-	  // in Safari 8-9 which returns 'object' for typed array and other constructors.
-	  var tag = isObject(value) ? objectToString.call(value) : '';
-	  return tag == funcTag || tag == genTag;
+	  // in Safari 9 which returns 'object' for typed arrays and other constructors.
+	  var tag = baseGetTag(value);
+	  return tag == funcTag || tag == genTag || tag == asyncTag || tag == proxyTag;
 	}
 
 	/**
@@ -49652,7 +50977,7 @@
 	 */
 	function isObject(value) {
 	  var type = typeof value;
-	  return !!value && (type == 'object' || type == 'function');
+	  return value != null && (type == 'object' || type == 'function');
 	}
 
 	/**
@@ -49680,7 +51005,7 @@
 	 * // => false
 	 */
 	function isObjectLike(value) {
-	  return !!value && typeof value == 'object';
+	  return value != null && typeof value == 'object';
 	}
 
 	/**
@@ -49734,26 +51059,65 @@
 	  return isArrayLike(object) ? arrayLikeKeys(object) : baseKeys(object);
 	}
 
+	/**
+	 * This method returns a new empty array.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @since 4.13.0
+	 * @category Util
+	 * @returns {Array} Returns the new empty array.
+	 * @example
+	 *
+	 * var arrays = _.times(2, _.stubArray);
+	 *
+	 * console.log(arrays);
+	 * // => [[], []]
+	 *
+	 * console.log(arrays[0] === arrays[1]);
+	 * // => false
+	 */
+	function stubArray() {
+	  return [];
+	}
+
+	/**
+	 * This method returns `false`.
+	 *
+	 * @static
+	 * @memberOf _
+	 * @since 4.13.0
+	 * @category Util
+	 * @returns {boolean} Returns `false`.
+	 * @example
+	 *
+	 * _.times(2, _.stubFalse);
+	 * // => [false, false]
+	 */
+	function stubFalse() {
+	  return false;
+	}
+
 	module.exports = isEqual;
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(215)(module)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(217)(module)))
 
 /***/ },
-/* 339 */
+/* 341 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = __webpack_require__(340);
+	module.exports = __webpack_require__(342);
 
 /***/ },
-/* 340 */
+/* 342 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
-	var bind = __webpack_require__(342);
-	var Axios = __webpack_require__(343);
-	var defaults = __webpack_require__(344);
+	var utils = __webpack_require__(343);
+	var bind = __webpack_require__(344);
+	var Axios = __webpack_require__(345);
+	var defaults = __webpack_require__(346);
 
 	/**
 	 * Create an instance of Axios
@@ -49786,15 +51150,15 @@
 	};
 
 	// Expose Cancel & CancelToken
-	axios.Cancel = __webpack_require__(361);
-	axios.CancelToken = __webpack_require__(362);
-	axios.isCancel = __webpack_require__(358);
+	axios.Cancel = __webpack_require__(363);
+	axios.CancelToken = __webpack_require__(364);
+	axios.isCancel = __webpack_require__(360);
 
 	// Expose all/spread
 	axios.all = function all(promises) {
 	  return Promise.all(promises);
 	};
-	axios.spread = __webpack_require__(363);
+	axios.spread = __webpack_require__(365);
 
 	module.exports = axios;
 
@@ -49803,12 +51167,12 @@
 
 
 /***/ },
-/* 341 */
+/* 343 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var bind = __webpack_require__(342);
+	var bind = __webpack_require__(344);
 
 	/*global toString:true*/
 
@@ -50108,7 +51472,7 @@
 
 
 /***/ },
-/* 342 */
+/* 344 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -50125,17 +51489,17 @@
 
 
 /***/ },
-/* 343 */
+/* 345 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var defaults = __webpack_require__(344);
-	var utils = __webpack_require__(341);
-	var InterceptorManager = __webpack_require__(355);
-	var dispatchRequest = __webpack_require__(356);
-	var isAbsoluteURL = __webpack_require__(359);
-	var combineURLs = __webpack_require__(360);
+	var defaults = __webpack_require__(346);
+	var utils = __webpack_require__(343);
+	var InterceptorManager = __webpack_require__(357);
+	var dispatchRequest = __webpack_require__(358);
+	var isAbsoluteURL = __webpack_require__(361);
+	var combineURLs = __webpack_require__(362);
 
 	/**
 	 * Create a new instance of Axios
@@ -50216,13 +51580,13 @@
 
 
 /***/ },
-/* 344 */
+/* 346 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
 
-	var utils = __webpack_require__(341);
-	var normalizeHeaderName = __webpack_require__(345);
+	var utils = __webpack_require__(343);
+	var normalizeHeaderName = __webpack_require__(347);
 
 	var PROTECTION_PREFIX = /^\)\]\}',?\n/;
 	var DEFAULT_CONTENT_TYPE = {
@@ -50239,10 +51603,10 @@
 	  var adapter;
 	  if (typeof XMLHttpRequest !== 'undefined') {
 	    // For browsers use XHR adapter
-	    adapter = __webpack_require__(346);
+	    adapter = __webpack_require__(348);
 	  } else if (typeof process !== 'undefined') {
 	    // For node use HTTP adapter
-	    adapter = __webpack_require__(346);
+	    adapter = __webpack_require__(348);
 	  }
 	  return adapter;
 	}
@@ -50316,12 +51680,12 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)))
 
 /***/ },
-/* 345 */
+/* 347 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	module.exports = function normalizeHeaderName(headers, normalizedName) {
 	  utils.forEach(headers, function processHeader(value, name) {
@@ -50334,18 +51698,18 @@
 
 
 /***/ },
-/* 346 */
+/* 348 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {'use strict';
 
-	var utils = __webpack_require__(341);
-	var settle = __webpack_require__(347);
-	var buildURL = __webpack_require__(350);
-	var parseHeaders = __webpack_require__(351);
-	var isURLSameOrigin = __webpack_require__(352);
-	var createError = __webpack_require__(348);
-	var btoa = (typeof window !== 'undefined' && window.btoa && window.btoa.bind(window)) || __webpack_require__(353);
+	var utils = __webpack_require__(343);
+	var settle = __webpack_require__(349);
+	var buildURL = __webpack_require__(352);
+	var parseHeaders = __webpack_require__(353);
+	var isURLSameOrigin = __webpack_require__(354);
+	var createError = __webpack_require__(350);
+	var btoa = (typeof window !== 'undefined' && window.btoa && window.btoa.bind(window)) || __webpack_require__(355);
 
 	module.exports = function xhrAdapter(config) {
 	  return new Promise(function dispatchXhrRequest(resolve, reject) {
@@ -50441,7 +51805,7 @@
 	    // This is only done if running in a standard browser environment.
 	    // Specifically not if we're in a web worker, or react-native.
 	    if (utils.isStandardBrowserEnv()) {
-	      var cookies = __webpack_require__(354);
+	      var cookies = __webpack_require__(356);
 
 	      // Add xsrf header
 	      var xsrfValue = (config.withCredentials || isURLSameOrigin(config.url)) && config.xsrfCookieName ?
@@ -50518,12 +51882,12 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(5)))
 
 /***/ },
-/* 347 */
+/* 349 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var createError = __webpack_require__(348);
+	var createError = __webpack_require__(350);
 
 	/**
 	 * Resolve or reject a Promise based on response status.
@@ -50549,12 +51913,12 @@
 
 
 /***/ },
-/* 348 */
+/* 350 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var enhanceError = __webpack_require__(349);
+	var enhanceError = __webpack_require__(351);
 
 	/**
 	 * Create an Error with the specified message, config, error code, and response.
@@ -50572,7 +51936,7 @@
 
 
 /***/ },
-/* 349 */
+/* 351 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -50597,12 +51961,12 @@
 
 
 /***/ },
-/* 350 */
+/* 352 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	function encode(val) {
 	  return encodeURIComponent(val).
@@ -50671,12 +52035,12 @@
 
 
 /***/ },
-/* 351 */
+/* 353 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	/**
 	 * Parse headers into an object
@@ -50714,12 +52078,12 @@
 
 
 /***/ },
-/* 352 */
+/* 354 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	module.exports = (
 	  utils.isStandardBrowserEnv() ?
@@ -50788,7 +52152,7 @@
 
 
 /***/ },
-/* 353 */
+/* 355 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -50830,12 +52194,12 @@
 
 
 /***/ },
-/* 354 */
+/* 356 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	module.exports = (
 	  utils.isStandardBrowserEnv() ?
@@ -50889,12 +52253,12 @@
 
 
 /***/ },
-/* 355 */
+/* 357 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	function InterceptorManager() {
 	  this.handlers = [];
@@ -50947,15 +52311,15 @@
 
 
 /***/ },
-/* 356 */
+/* 358 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
-	var transformData = __webpack_require__(357);
-	var isCancel = __webpack_require__(358);
-	var defaults = __webpack_require__(344);
+	var utils = __webpack_require__(343);
+	var transformData = __webpack_require__(359);
+	var isCancel = __webpack_require__(360);
+	var defaults = __webpack_require__(346);
 
 	/**
 	 * Throws a `Cancel` if cancellation has been requested.
@@ -51032,12 +52396,12 @@
 
 
 /***/ },
-/* 357 */
+/* 359 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var utils = __webpack_require__(341);
+	var utils = __webpack_require__(343);
 
 	/**
 	 * Transform the data for a request or a response
@@ -51058,7 +52422,7 @@
 
 
 /***/ },
-/* 358 */
+/* 360 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -51069,7 +52433,7 @@
 
 
 /***/ },
-/* 359 */
+/* 361 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -51089,7 +52453,7 @@
 
 
 /***/ },
-/* 360 */
+/* 362 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -51107,7 +52471,7 @@
 
 
 /***/ },
-/* 361 */
+/* 363 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -51132,12 +52496,12 @@
 
 
 /***/ },
-/* 362 */
+/* 364 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var Cancel = __webpack_require__(361);
+	var Cancel = __webpack_require__(363);
 
 	/**
 	 * A `CancelToken` is an object that can be used to request cancellation of an operation.
@@ -51195,7 +52559,7 @@
 
 
 /***/ },
-/* 363 */
+/* 365 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -51228,7 +52592,7 @@
 
 
 /***/ },
-/* 364 */
+/* 366 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -51241,23 +52605,23 @@
 
 	var _react2 = _interopRequireDefault(_react);
 
-	var _moment = __webpack_require__(214);
+	var _moment = __webpack_require__(216);
 
 	var _moment2 = _interopRequireDefault(_moment);
 
 	var _reactChartjs = __webpack_require__(183);
 
-	var _axios = __webpack_require__(339);
+	var _axios = __webpack_require__(341);
 
 	var _axios2 = _interopRequireDefault(_axios);
 
-	var _async = __webpack_require__(365);
+	var _async = __webpack_require__(367);
 
-	var _parseLinkHeader = __webpack_require__(368);
+	var _parseLinkHeader = __webpack_require__(370);
 
 	var _parseLinkHeader2 = _interopRequireDefault(_parseLinkHeader);
 
-	var _tokens = __webpack_require__(376);
+	var _tokens = __webpack_require__(378);
 
 	var _tokens2 = _interopRequireDefault(_tokens);
 
@@ -51428,6 +52792,7 @@
 	          labels: this.state.labels,
 	          datasets: datasets
 	        }, options: {
+	          animation: false,
 	          legend: {
 	            labels: {
 	              fontColor: "white",
@@ -51476,7 +52841,7 @@
 	exports.default = StargazersTile;
 
 /***/ },
-/* 365 */
+/* 367 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, module, setImmediate, process) {(function (global, factory) {
@@ -56769,10 +58134,10 @@
 
 	})));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(215)(module), __webpack_require__(366).setImmediate, __webpack_require__(5)))
+	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(217)(module), __webpack_require__(368).setImmediate, __webpack_require__(5)))
 
 /***/ },
-/* 366 */
+/* 368 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var apply = Function.prototype.apply;
@@ -56825,13 +58190,13 @@
 	};
 
 	// setimmediate attaches itself to the global object
-	__webpack_require__(367);
+	__webpack_require__(369);
 	exports.setImmediate = setImmediate;
 	exports.clearImmediate = clearImmediate;
 
 
 /***/ },
-/* 367 */
+/* 369 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -57024,14 +58389,14 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, (function() { return this; }()), __webpack_require__(5)))
 
 /***/ },
-/* 368 */
+/* 370 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var qs = __webpack_require__(369)
-	  , url = __webpack_require__(372)
-	  , xtend = __webpack_require__(375);
+	var qs = __webpack_require__(371)
+	  , url = __webpack_require__(374)
+	  , xtend = __webpack_require__(377);
 
 	function hasRel(x) {
 	  return x && x.rel;
@@ -57083,17 +58448,17 @@
 
 
 /***/ },
-/* 369 */
+/* 371 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	exports.decode = exports.parse = __webpack_require__(370);
-	exports.encode = exports.stringify = __webpack_require__(371);
+	exports.decode = exports.parse = __webpack_require__(372);
+	exports.encode = exports.stringify = __webpack_require__(373);
 
 
 /***/ },
-/* 370 */
+/* 372 */
 /***/ function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -57179,7 +58544,7 @@
 
 
 /***/ },
-/* 371 */
+/* 373 */
 /***/ function(module, exports) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -57249,7 +58614,7 @@
 
 
 /***/ },
-/* 372 */
+/* 374 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// Copyright Joyent, Inc. and other Node contributors.
@@ -57275,8 +58640,8 @@
 
 	'use strict';
 
-	var punycode = __webpack_require__(373);
-	var util = __webpack_require__(374);
+	var punycode = __webpack_require__(375);
+	var util = __webpack_require__(376);
 
 	exports.parse = urlParse;
 	exports.resolve = urlResolve;
@@ -57351,7 +58716,7 @@
 	      'gopher:': true,
 	      'file:': true
 	    },
-	    querystring = __webpack_require__(369);
+	    querystring = __webpack_require__(371);
 
 	function urlParse(url, parseQueryString, slashesDenoteHost) {
 	  if (url && util.isObject(url) && url instanceof Url) return url;
@@ -57987,7 +59352,7 @@
 
 
 /***/ },
-/* 373 */
+/* 375 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {/*! https://mths.be/punycode v1.3.2 by @mathias */
@@ -58519,10 +59884,10 @@
 
 	}(this));
 
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(215)(module), (function() { return this; }())))
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(217)(module), (function() { return this; }())))
 
 /***/ },
-/* 374 */
+/* 376 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -58544,7 +59909,7 @@
 
 
 /***/ },
-/* 375 */
+/* 377 */
 /***/ function(module, exports) {
 
 	module.exports = extend
@@ -58569,7 +59934,7 @@
 
 
 /***/ },
-/* 376 */
+/* 378 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -58591,7 +59956,7 @@
 	};
 
 /***/ },
-/* 377 */
+/* 379 */
 /***/ function(module, exports, __webpack_require__) {
 
 	"use strict";
@@ -58606,11 +59971,11 @@
 
 	var _reactChartjs = __webpack_require__(183);
 
-	var _axios = __webpack_require__(339);
+	var _axios = __webpack_require__(341);
 
 	var _axios2 = _interopRequireDefault(_axios);
 
-	var _colors = __webpack_require__(378);
+	var _colors = __webpack_require__(380);
 
 	var _colors2 = _interopRequireDefault(_colors);
 
@@ -58688,7 +60053,7 @@
 	exports.default = TotalDownloadsTile;
 
 /***/ },
-/* 378 */
+/* 380 */
 /***/ function(module, exports) {
 
 	"use strict";

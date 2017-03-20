@@ -174,6 +174,7 @@ var StargazersTile = React.createClass({
         labels: this.state.labels,
         datasets: datasets
       }} options={{
+        animation: false,
         legend: {
           labels: {
             fontColor: "white",
