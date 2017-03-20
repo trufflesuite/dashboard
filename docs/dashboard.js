@@ -21843,8 +21843,8 @@
 	      //   actualdataset.push(null);
 	      // }
 
-	      var lastThreeMonths = maindataset[maindataset.length - 2] + maindataset[maindataset.length - 3] + maindataset[maindataset.length - 4];
-	      var prevThreeMonths = maindataset[maindataset.length - 5] + maindataset[maindataset.length - 6] + maindataset[maindataset.length - 7];
+	      var lastThreeMonths = maindataset[maindataset.length - 1] + maindataset[maindataset.length - 2] + maindataset[maindataset.length - 3];
+	      var prevThreeMonths = maindataset[maindataset.length - 4] + maindataset[maindataset.length - 5] + maindataset[maindataset.length - 6];
 
 	      var growth = lastThreeMonths / prevThreeMonths - 1;
 	      var direction = growth < 0 ? "down" : "up";
