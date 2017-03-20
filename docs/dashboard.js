@@ -22038,7 +22038,7 @@
 	    } else {
 	      chart = _react2.default.createElement(_reactChartjs.Line, { ref: "downloads", data: self.state.data, options: {
 	          legend: { display: false },
-	          title: { display: true, text: "Monthly Downloads" },
+	          title: { display: true, text: "Monthly Downloads (until last month)" },
 	          animation: false,
 	          tooltips: {
 	            displayColors: false,
