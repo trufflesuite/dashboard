@@ -29,14 +29,13 @@ var Dashboard = React.createClass({
               </div>
             </div>
 
-            <h1 className="title">Competitive Landscape</h1>
+            <h1 className="title">Developer Adoption</h1>
             <h2 className="subtitle">
-              How Truffle fits with other tools in the market.
+              Truffle's usage by developers over time.
             </h2>
             <div className="tile is-ancestor">
               <div className="tile is-12">
-                <StargazersTile projects={["Consensys/truffle", "nexusdev/dapple", "iurimatias/embark-framework"]}/>
-                <TotalDownloadsTile packages={["truffle", "embark-framework", "dapple"] } />
+                <StargazersTile projects={["Consensys/truffle"]}/>
               </div>
             </div>
 

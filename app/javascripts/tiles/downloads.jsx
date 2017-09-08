@@ -1,6 +1,8 @@
 import React from "react";
 import {Line, Chart} from 'react-chartjs-2';
 import axios from "axios";
+import reduce from "async/reduce";
+import moment from "moment";
 
 const months = [
   "Jan",
@@ -35,17 +37,39 @@ var DownloadsTile = React.createClass({
   componentDidMount: function() {
     var self = this;
 
-    axios.get("https://gitter.im/explore/tags/ethereum", function(r) {
-      console.log(r);
-    })
-
     var date = new Date();
     date = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
 
-    axios.get("https://api.npmjs.org/downloads/range/2015-05-01:" + date + "/truffle").then(function(response) {
-      var total = 0;
-      var downloads = response.data.downloads;
+    var currentMonth = moment("2015-05-01");
 
+    // Create array of requests to make
+    var requests = [];
+
+    while (currentMonth.toDate() < new Date()) {
+      var start = moment(currentMonth.format("YYYY-MM-DD"));
+
+      currentMonth.add(6, "months");
+
+      var end = moment(currentMonth.format("YYYY-MM-DD"));
+
+      // Add one day so there's no overlap
+      requests.push([start.add(1, "day"), end]);
+    }
+
+    requests = requests.map(function(months) {
+      var start = months[0];
+      var end = months[1];
+      return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/truffle";
+    });
+
+    reduce(requests, [], function(memo, item, callback) {
+      axios.get(item).then(function(response) {
+        var downloads = response.data.downloads;
+        callback(null, memo.concat(downloads));
+      }).catch(callback)
+    }, function(err, downloads) {
+
+      var total = 0;
       var showCurrent = window.location.hash.toLowerCase().indexOf("current") >= 0;
 
       var data = {
