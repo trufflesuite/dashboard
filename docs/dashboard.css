@@ -4027,19 +4027,42 @@ label.panel-block {
   background-color: whitesmoke;
   padding: 3rem 1.5rem 6rem; }
 
-.dashboard .descriptive-tile {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: stretch; }
-  .dashboard .descriptive-tile .content {
-    text-align: center; }
-
-.dashboard .white {
-  color: white; }
-
-.dashboard .no-left-padding {
-  padding-left: 0; }
-
-.dashboard .no-right-padding {
-  padding-right: 0; }
+.dashboard {
+  background: #33262a;
+  color: #fff; }
+  .dashboard .title, .dashboard .subtitle {
+    color: #fff; }
+  .dashboard .nav, .dashboard .footer, .dashboard .footer .content, .dashboard .section {
+    background: #33262a;
+    color: #fff; }
+    .dashboard .nav h1, .dashboard .nav h2, .dashboard .nav h3, .dashboard .nav h4, .dashboard .nav h5, .dashboard .nav h6, .dashboard .footer h1, .dashboard .footer h2, .dashboard .footer h3, .dashboard .footer h4, .dashboard .footer h5, .dashboard .footer h6, .dashboard .footer .content h1, .dashboard .footer .content h2, .dashboard .footer .content h3, .dashboard .footer .content h4, .dashboard .footer .content h5, .dashboard .footer .content h6, .dashboard .section h1, .dashboard .section h2, .dashboard .section h3, .dashboard .section h4, .dashboard .section h5, .dashboard .section h6 {
+      color: #fff; }
+  .dashboard > .container {
+    border-bottom: 2px solid #5e464d;
+    max-width: 100%; }
+  .dashboard .nav {
+    max-width: 100%;
+    margin: 0 15px; }
+    .dashboard .nav a {
+      color: #fff; }
+  .dashboard .footer {
+    border-top: 2px solid #5e464d;
+    padding: 3rem; }
+  .dashboard .descriptive-tile {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch; }
+    .dashboard .descriptive-tile .content {
+      text-align: center; }
+  .dashboard .milk-chocolate {
+    background: #5e464d; }
+  .dashboard .white {
+    color: white; }
+  .dashboard .no-left-padding {
+    padding-left: 0; }
+  .dashboard .no-right-padding {
+    padding-right: 0; }
+  .dashboard .truffle-border {
+    background: #33262a;
+    border: 2px solid #3fe0c5; }
