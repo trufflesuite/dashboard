@@ -31,11 +31,11 @@ var Dashboard = React.createClass({
 
             <h1 className="title">Developer Adoption</h1>
             <h2 className="subtitle">
-              Truffle's usage by developers over time.
+              Truffle Suite's usage by developers over time.
             </h2>
             <div className="tile is-ancestor">
               <div className="tile is-12">
-                <StargazersTile projects={["Consensys/truffle"]}/>
+                <StargazersTile projects={["trufflesuite/truffle", "trufflesuite/ganache", "trufflesuite/drizzle"]}/>
               </div>
             </div>
 

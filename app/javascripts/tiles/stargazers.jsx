@@ -141,9 +141,9 @@ var StargazersTile = React.createClass({
 
     // Colors from here: http://bulma.io/documentation/overview/variables/
     var colors = [
-      "#00d1b2",
-      "#3273dc",
-      "#ffdd57",
+      "#3fe0c5",
+      "#e4a663",
+      "#e911bd",
       "#b86bff"
     ];
 
@@ -210,7 +210,7 @@ var StargazersTile = React.createClass({
 
     return (
       <div className="tile is-parent is-8">
-        <div className="tile is-child notification is-danger">
+        <div className="tile is-child notification milk-chocolate">
           {chart}
         </div>
       </div>

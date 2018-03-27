@@ -1,6 +1,41 @@
 @import "../../node_modules/bulma/bulma.sass";
 
 .dashboard {
+  background: #33262a;
+  color: #fff;
+
+  .title, .subtitle {
+    color: #fff;
+  }
+
+  .nav, .footer, .footer .content, .section {
+    background: #33262a;
+    color: #fff;
+
+    h1, h2, h3, h4, h5, h6 {
+      color: #fff;
+    }
+  }
+
+  > .container {
+    border-bottom: 2px solid #5e464d;
+    max-width: 100%;
+  }
+
+  .nav {
+    max-width: 100%;
+    margin: 0 15px;
+
+    a {
+      color: #fff;
+    }
+  }
+
+  .footer {
+    border-top: 2px solid #5e464d;
+    padding: 3rem;
+  }
+
   .descriptive-tile {
     display: flex;
     flex-direction: column;
@@ -10,6 +45,10 @@
     .content {
       text-align: center;
     }
+  }
+
+  .milk-chocolate {
+    background: #5e464d;
   }
 
   .white {
@@ -22,5 +61,10 @@
 
   .no-right-padding {
     padding-right: 0;
+  }
+
+  .truffle-border {
+    background: #33262a;
+    border: 2px solid #3fe0c5;
   }
 }

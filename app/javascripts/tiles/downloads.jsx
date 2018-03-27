@@ -358,7 +358,7 @@ var DownloadsTile = React.createClass({
           </div>
         </div>
         <div className="tile is-vertical is-parent">
-          <div className="tile is-child notification is-warning descriptive-tile">
+          <div className="tile is-child notification truffle-border descriptive-tile">
             <div>
               Lifetime Downloads
             </div>
@@ -367,7 +367,7 @@ var DownloadsTile = React.createClass({
             </div>
             <div></div>
           </div>
-          <div className="tile is-child notification is-info descriptive-tile">
+          <div className="tile is-child notification truffle-border descriptive-tile">
             <div>
               Last Three Months
             </div>
