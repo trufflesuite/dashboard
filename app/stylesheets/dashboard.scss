@@ -8,6 +8,11 @@
     color: #fff;
   }
 
+  h3 {
+    font-weight: bold;
+    margin-bottom: 15px;
+  }
+
   .nav, .footer, .footer .content, .section {
     background: #33262a;
     color: #fff;
@@ -66,5 +71,32 @@
   .truffle-border {
     background: #33262a;
     border: 2px solid #3fe0c5;
+  }
+}
+
+.is-truffle {
+  background: #3fe0c5;
+
+  &.has-border {
+    background: #33262a;
+    border: 2px solid #3fe0c5;
+  }
+}
+
+.is-ganache {
+  background: #e4a663;
+
+  &.has-border {
+    background: #33262a;
+    border: 2px solid #e4a663;
+  }
+}
+
+.is-drizzle {
+  background: #e911bd;
+
+  &.has-border {
+    background: #33262a;
+    border: 2px solid #e911bd;
   }
 }

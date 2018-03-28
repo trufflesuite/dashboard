@@ -209,7 +209,7 @@ var StargazersTile = React.createClass({
     }
 
     return (
-      <div className="tile is-parent is-8">
+      <div className="tile is-parent">
         <div className="tile is-child notification milk-chocolate">
           {chart}
         </div>

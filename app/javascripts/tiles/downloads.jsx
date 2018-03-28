@@ -40,17 +40,17 @@ var DownloadsTile = React.createClass({
     var date = new Date();
     date = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
 
-    var currentMonth = moment("2015-05-01");
+    var startDate = self.props.startDate ? moment(self.props.startDate) : moment("2015-05-01");
 
     // Create array of requests to make
     var requests = [];
 
-    while (currentMonth.toDate() < new Date()) {
-      var start = moment(currentMonth.format("YYYY-MM-DD"));
+    while (startDate.toDate() < new Date()) {
+      var start = moment(startDate.format("YYYY-MM-DD"));
 
-      currentMonth.add(6, "months");
+      startDate.add(6, "months");
 
-      var end = moment(currentMonth.format("YYYY-MM-DD"));
+      var end = moment(startDate.format("YYYY-MM-DD"));
 
       // Add one day so there's no overlap
       requests.push([start.add(1, "day"), end]);
@@ -59,7 +59,7 @@ var DownloadsTile = React.createClass({
     requests = requests.map(function(months) {
       var start = months[0];
       var end = months[1];
-      return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/truffle";
+      return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/" + self.props.packageName;
     });
 
     reduce(requests, [], function(memo, item, callback) {
@@ -77,7 +77,7 @@ var DownloadsTile = React.createClass({
         datasets: [
           {
             fill: false,
-            lineTension: 0.3,
+            lineTension: 0,
             borderWidth: 0.1,
             pointBackgroundColor: 'white',
             pointBorderColor: 'white',
@@ -92,7 +92,7 @@ var DownloadsTile = React.createClass({
           },
           {
             fill: false,
-            lineTension: 0.3,
+            lineTension: 0,
             borderWidth: 0.1,
             pointBackgroundColor: 'black',
             pointBorderColor: 'black',
@@ -114,7 +114,7 @@ var DownloadsTile = React.createClass({
       var maindataset = data.datasets[0].data;
       var actualdataset = data.datasets[1].data;
 
-      var currentMonth = {
+      var startDate = {
         label: self.getMonth(downloads[0].day),
         total: 0
       };
@@ -122,26 +122,26 @@ var DownloadsTile = React.createClass({
       downloads.forEach(function(item) {
         var month = self.getMonth(item.day);
 
-        if (month != currentMonth.label) {
+        if (month != startDate.label) {
           // Update the labels.
-          data.labels.push(currentMonth.label);
+          data.labels.push(startDate.label);
 
           // Update the datasets
-          maindataset.push(currentMonth.total);
+          maindataset.push(startDate.total);
           actualdataset.push(null);
 
-          currentMonth = {label: month, total: 0};
+          startDate = {label: month, total: 0};
         }
 
-        currentMonth.total += item.downloads;
+        startDate.total += item.downloads;
         total += item.downloads;
       });
 
       // Don't add the last month for now (that's why this is commented out).
 
-      // if (data.labels[data.labels.length - 1] != currentMonth.label) {
-      //   data.labels.push(currentMonth.label);
-      //   maindataset.push(currentMonth.total);
+      // if (data.labels[data.labels.length - 1] != startDate.label) {
+      //   data.labels.push(startDate.label);
+      //   maindataset.push(startDate.total);
       //   actualdataset.push(null);
       // }
 
@@ -155,18 +155,18 @@ var DownloadsTile = React.createClass({
       // Make sure the projected dataset has the last two points.
       // Then op off the last data point on the main dataset so the
       // projected dataset shows through.
-      // var currentMonthDownloads = maindataset[maindataset.length - 1];
+      // var startDateDownloads = maindataset[maindataset.length - 1];
       // var lastMonthDownloads = maindataset[maindataset.length - 2];
-      // var projectedCurrentMonthDownloads = parseInt(lastMonthDownloads * .9);
+      // var projectedstartDateDownloads = parseInt(lastMonthDownloads * .9);
       //
-      // var showProjected = projectedCurrentMonthDownloads > currentMonthDownloads;
+      // var showProjected = projectedstartDateDownloads > startDateDownloads;
       //
       // if (showProjected) {
       //   maindataset.pop();
-      //   maindataset.push(projectedCurrentMonthDownloads)
+      //   maindataset.push(projectedstartDateDownloads)
       //
       //   actualdataset.pop();
-      //   actualdataset.push(currentMonthDownloads);
+      //   actualdataset.push(startDateDownloads);
       // }
 
       self.setState({
@@ -211,7 +211,7 @@ var DownloadsTile = React.createClass({
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 4;
 
-    var curveData = getCurve(points, 0.45, 30)
+    var curveData = getCurve(points, 0, 30)
 
     // Draw main line. We're going to draw all lines between points
     // except for the last one.
@@ -350,15 +350,29 @@ var DownloadsTile = React.createClass({
       }}/>;
     }
 
+    const GrowthTile = this.state.growth ? (
+      <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorClass}>
+        <div>
+          Last Three Months
+        </div>
+        <div className="content is-large is-marginless">
+          <h1 className="white is-marginless">{this.state.growth_direction} {this.state.growth}%</h1>
+        </div>
+        <div>
+          * excludes current month
+        </div>
+      </div>
+    ) : ('');
+
     return (
       <div className="tile">
         <div className="tile is-parent is-8">
-          <div className="tile is-child notification is-primary">
+          <div className={'tile is-child notification ' + this.props.colorClass}>
             {chart}
           </div>
         </div>
         <div className="tile is-vertical is-parent">
-          <div className="tile is-child notification truffle-border descriptive-tile">
+          <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorClass}>
             <div>
               Lifetime Downloads
             </div>
@@ -367,17 +381,8 @@ var DownloadsTile = React.createClass({
             </div>
             <div></div>
           </div>
-          <div className="tile is-child notification truffle-border descriptive-tile">
-            <div>
-              Last Three Months
-            </div>
-            <div className="content is-large is-marginless">
-              <h1 className="white is-marginless">{this.state.growth_direction} {this.state.growth}%</h1>
-            </div>
-            <div>
-              * excludes current month
-            </div>
-          </div>
+
+          {GrowthTile}
         </div>
       </div>
     );

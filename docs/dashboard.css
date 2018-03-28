@@ -4032,6 +4032,9 @@ label.panel-block {
   color: #fff; }
   .dashboard .title, .dashboard .subtitle {
     color: #fff; }
+  .dashboard h3 {
+    font-weight: bold;
+    margin-bottom: 15px; }
   .dashboard .nav, .dashboard .footer, .dashboard .footer .content, .dashboard .section {
     background: #33262a;
     color: #fff; }
@@ -4066,3 +4069,21 @@ label.panel-block {
   .dashboard .truffle-border {
     background: #33262a;
     border: 2px solid #3fe0c5; }
+
+.is-truffle {
+  background: #3fe0c5; }
+  .is-truffle.has-border {
+    background: #33262a;
+    border: 2px solid #3fe0c5; }
+
+.is-ganache {
+  background: #e4a663; }
+  .is-ganache.has-border {
+    background: #33262a;
+    border: 2px solid #e4a663; }
+
+.is-drizzle {
+  background: #e911bd; }
+  .is-drizzle.has-border {
+    background: #33262a;
+    border: 2px solid #e911bd; }

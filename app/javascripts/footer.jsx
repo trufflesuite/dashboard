@@ -7,7 +7,7 @@ var Footer = React.createClass({
         <div className="container">
           <div className="content has-text-centered">
             <p>
-              Made with &#x02764; accross the USA.
+              Made with &#x02764; across the USA.
             </p>
             {/*<p>
               <a className="icon" href="https://github.com/jgthms/bulma">

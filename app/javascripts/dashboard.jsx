@@ -23,9 +23,25 @@ var Dashboard = React.createClass({
             <h2 className="subtitle">
               Over the lifetime of Truffle, from inception to now.
             </h2>
+
+            <h3>TRUFFLE</h3>
             <div className="tile is-ancestor">
               <div className="tile is-12">
-                <DownloadsTile />
+                <DownloadsTile colorClass="is-truffle" packageName="truffle" startDate="2015-05-01" />
+              </div>
+            </div>
+
+            <h3>GANACHE (ganache-cli)</h3>
+            <div className="tile is-ancestor">
+              <div className="tile is-12">
+                <DownloadsTile colorClass="is-ganache" packageName="ganache-cli" startDate="2017-10-01" />
+              </div>
+            </div>
+
+            <h3>DRIZZLE</h3>
+            <div className="tile is-ancestor">
+              <div className="tile is-12">
+                <DownloadsTile colorClass="is-drizzle" packageName="drizzle" startDate="2017-12-01" />
               </div>
             </div>
 
