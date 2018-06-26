@@ -22092,7 +22092,7 @@
 	            _react2.default.createElement(
 	              "span",
 	              { className: "icon" },
-	              _react2.default.createElement("i", { className: "fa fa-github" })
+	              _react2.default.createElement("i", { className: "fab fa-github" })
 	            )
 	          ),
 	          _react2.default.createElement(
@@ -22101,7 +22101,7 @@
 	            _react2.default.createElement(
 	              "span",
 	              { className: "icon" },
-	              _react2.default.createElement("i", { className: "fa fa-twitter" })
+	              _react2.default.createElement("i", { className: "fab fa-twitter" })
 	            )
 	          )
 	        ),

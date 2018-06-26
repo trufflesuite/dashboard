@@ -14,12 +14,12 @@ var Header = React.createClass({
           <div className="nav-center">
             <a className="nav-item">
               <span className="icon">
-                <i className="fa fa-github"></i>
+                <i className="fab fa-github"></i>
               </span>
             </a>
             <a className="nav-item">
               <span className="icon">
-                <i className="fa fa-twitter"></i>
+                <i className="fab fa-twitter"></i>
               </span>
             </a>
           </div>
