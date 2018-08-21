@@ -351,7 +351,7 @@ var DownloadsTile = React.createClass({
     }
 
     const GrowthTile = this.state.growth ? (
-      <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorClass}>
+      <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorclassName}>
         <div>
           Last Three Months
         </div>
@@ -367,12 +367,12 @@ var DownloadsTile = React.createClass({
     return (
       <div className="tile">
         <div className="tile is-parent is-8">
-          <div className={'tile is-child notification ' + this.props.colorClass}>
+          <div className={'tile is-child notification ' + this.props.colorclassName}>
             {chart}
           </div>
         </div>
         <div className="tile is-vertical is-parent">
-          <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorClass}>
+          <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorclassName}>
             <div>
               Lifetime Downloads
             </div>

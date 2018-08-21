@@ -1,24 +1,22 @@
-@import "../../node_modules/bulma/bulma.sass";
+@import "../../node_modules/bulma/sass/utilities/_all.sass";
+@import "../../node_modules/bulma/sass/grid/_all.sass";
 
 .dashboard {
   background: #33262a;
   color: #fff;
+  padding: 4rem 15px;
 
   .title, .subtitle {
     color: #fff;
   }
 
-  h3 {
-    font-weight: bold;
-    margin-bottom: 15px;
-  }
-
-  .nav, .footer, .footer .content, .section {
+  .section {
     background: #33262a;
     color: #fff;
 
     h1, h2, h3, h4, h5, h6 {
       color: #fff;
+      font-weight: 400;
     }
   }
 
@@ -27,18 +25,9 @@
     max-width: 100%;
   }
 
-  .nav {
-    max-width: 100%;
-    margin: 0 15px;
-
-    a {
-      color: #fff;
-    }
-  }
-
-  .footer {
-    border-top: 2px solid #5e464d;
-    padding: 3rem;
+  .notification {
+    padding: 1.25rem;
+    border-radius: 3px;
   }
 
   .descriptive-tile {
