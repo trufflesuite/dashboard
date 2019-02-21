@@ -143,7 +143,7 @@ var StargazersTile = React.createClass({
     var colors = [
       "#3fe0c5",
       "#e4a663",
-      "#e911bd",
+      "#f069d6",
       "#b86bff"
     ];
 
