@@ -323,8 +323,20 @@ var DownloadsTile = React.createClass({
     } else {
       chart = <Line ref='downloads' data={self.state.data} options={{
         legend: {display: false},
-        title: {display: true, text: "Monthly Downloads (until last month)"},
+        title: {display: true, text: "Monthly Downloads (until last month)", fontColor: "#383838"},
         animation: false,
+        scales: {
+          xAxes: [{
+            ticks: {
+              fontColor: "#383838"
+            }
+          }],
+          yAxes: [{
+            ticks: {
+              fontColor: "#383838"
+            }
+          }]
+        },
         tooltips: {
           displayColors: false,
           callbacks: {
