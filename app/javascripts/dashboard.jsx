@@ -7,8 +7,8 @@ import ReactDOM from "react-dom";
 //import Footer from "./footer.jsx";
 
 import DownloadsTile from "./tiles/downloads.jsx";
-import StargazersTile from "./tiles/stargazers.jsx";
-import TotalDownloadsTile from "./tiles/totaldownloads.jsx";
+// import StargazersTile from "./tiles/stargazers.jsx";
+// import TotalDownloadsTile from "./tiles/totaldownloads.jsx";
 
 var Dashboard = React.createClass({
   render: function() {
@@ -43,7 +43,7 @@ var Dashboard = React.createClass({
                 <DownloadsTile colorclassName="is-drizzle" packageName="drizzle" startDate="2017-12-01" />
               </div>
             </div>
-
+{/* 
             <h2 className="mt-5">Developer Adoption</h2>
             <p>
               Truffle Suite's usage by developers over time, measured in GitHub stars.
@@ -53,7 +53,7 @@ var Dashboard = React.createClass({
                 <StargazersTile projects={["trufflesuite/truffle", "trufflesuite/ganache", "trufflesuite/drizzle"]}/>
               </div>
             </div>
-
+*/}
           </div>
         </div>
 
