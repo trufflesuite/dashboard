@@ -583,7 +583,7 @@
     .dashboard .section h1, .dashboard .section h2, .dashboard .section h3, .dashboard .section h4, .dashboard .section h5, .dashboard .section h6 {
       color: #fff;
       font-weight: 400; }
-  .dashboard > .container {
+  .dashboard > .dashboard-container {
     border-bottom: 2px solid #5e464d;
     max-width: 100%; }
   .dashboard .notification {

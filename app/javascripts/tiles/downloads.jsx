@@ -59,16 +59,38 @@ var DownloadsTile = React.createClass({
     requests = requests.map(function(months) {
       var start = months[0];
       var end = months[1];
-      return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/" + self.props.packageName;
+      const names = self.props.packageName.split(",");
+      return names.map(name => {
+        return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/" + name;
+      });
     });
 
-    reduce(requests, [], function(memo, item, callback) {
-      axios.get(item).then(function(response) {
-        var downloads = response.data.downloads;
-        callback(null, memo.concat(downloads));
-      }).catch(callback)
-    }, function(err, downloads) {
+    function getDownloads(memo, items, callback) {
+      const responses = items.map(item => axios.get(item));
+      Promise.all(responses)
+        .then(results => {
+          results.forEach(response => {
+            response.data.downloads.forEach(download => {
+              const existing = memo.find(item => item.day === download.day);
+              if (existing) {
+                existing.downloads += download.downloads;
+              } else {
+                memo.push(download);
+              }
+            });
+          });
+          callback(null, memo);
+        })
+        .catch(error => {
+          console.error(error);
+          callback(error);
+        });
+    }
 
+    reduce(requests, [], function(memo, items, callback) {
+      getDownloads(memo, items, callback);
+    }, function(err, downloads) {
+      downloads.sort((a, b) => a.day.localeCompare(b.day));
       var total = 0;
       var showCurrent = window.location.search.toLowerCase().indexOf("current") >= 0;
       var data = {
@@ -160,11 +182,11 @@ var DownloadsTile = React.createClass({
         actualdataset.push(null);
       }
 
-      var lastThreeMonths = (maindataset[maindataset.length - 1] + maindataset[maindataset.length - 2] + maindataset[maindataset.length - 3]);
-      var prevThreeMonths = (maindataset[maindataset.length - 4] + maindataset[maindataset.length - 5] + maindataset[maindataset.length - 6]);
+      var lastSixMonths = (maindataset[maindataset.length - 1] + maindataset[maindataset.length - 2] + maindataset[maindataset.length - 3] + maindataset[maindataset.length - 4] + maindataset[maindataset.length - 5] + maindataset[maindataset.length - 6]);
+      var prevSixMonths = (maindataset[maindataset.length - 7] + maindataset[maindataset.length - 8] + maindataset[maindataset.length - 9] - maindataset[maindataset.length - 10] + maindataset[maindataset.length - 11] + maindataset[maindataset.length - 12]);
 
-      var totalGrowthInDownloads = lastThreeMonths - prevThreeMonths;
-      var growth = Math.round(Math.abs(totalGrowthInDownloads) / prevThreeMonths * 100);
+      var totalGrowthInDownloads = lastSixMonths - prevSixMonths;
+      var growth = Math.round(Math.abs(totalGrowthInDownloads) / prevSixMonths * 100);
       var direction = totalGrowthInDownloads < 0 ? "down" : "up";
 
       self.setState({
@@ -363,7 +385,7 @@ var DownloadsTile = React.createClass({
     const GrowthTile = this.state.growth ? (
       <div className={'tile is-child notification has-border descriptive-tile ' + this.props.colorclassName}>
         <div>
-          Last Three Months
+          Last Six Months
         </div>
         <div className="content is-large is-marginless">
           <h1 className="white is-marginless">{this.state.growth_direction} {this.state.growth}%</h1>
@@ -378,7 +400,9 @@ var DownloadsTile = React.createClass({
       <div className="tile">
         <div className="tile is-parent is-8">
           <div className={'tile is-child notification ' + this.props.colorclassName}>
-            {chart}
+            <div>
+              {chart}
+            </div>
           </div>
         </div>
         <div className="tile is-vertical is-parent">
