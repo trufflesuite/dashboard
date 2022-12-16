@@ -4,7 +4,7 @@ var Footer = React.createClass({
   render: function() {
     return (
       <footer className="footer">
-        <div className="container">
+        <div className="dashboard-container">
           <div className="content has-text-centered">
             <p>
               Made with &#x02764; across the USA.

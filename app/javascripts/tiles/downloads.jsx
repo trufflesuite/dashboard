@@ -400,7 +400,9 @@ var DownloadsTile = React.createClass({
       <div className="tile">
         <div className="tile is-parent is-8">
           <div className={'tile is-child notification ' + this.props.colorclassName}>
-            {chart}
+            <div>
+              {chart}
+            </div>
           </div>
         </div>
         <div className="tile is-vertical is-parent">

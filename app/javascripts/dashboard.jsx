@@ -15,7 +15,7 @@ var Dashboard = React.createClass({
     return (
       <div className="dashboard">
         <div className="section">
-          <div className="container">
+          <div className="dashboard-container">
             <h1 className="mb-6">Dashboard</h1>
 
             <h2>Downloads</h2>
