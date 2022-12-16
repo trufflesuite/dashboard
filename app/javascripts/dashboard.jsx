@@ -30,10 +30,10 @@ var Dashboard = React.createClass({
               </div>
             </div>
 
-            <h3>GANACHE (ganache-cli)</h3>
+            <h3>GANACHE</h3>
             <div className="tile is-ancestor">
               <div className="tile is-12">
-                <DownloadsTile colorclassName="is-ganache" packageName="ganache-cli" startDate="2017-10-01" />
+                <DownloadsTile colorclassName="is-ganache" packageName="ethereumjs-testrpc,ganache,ganache-cli,ganache-core" startDate="2016-01-08" />
               </div>
             </div>
 

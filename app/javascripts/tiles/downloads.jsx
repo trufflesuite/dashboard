@@ -59,16 +59,38 @@ var DownloadsTile = React.createClass({
     requests = requests.map(function(months) {
       var start = months[0];
       var end = months[1];
-      return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/" + self.props.packageName;
+      const names = self.props.packageName.split(",");
+      return names.map(name => {
+        return "https://api.npmjs.org/downloads/range/" + start.format("YYYY-MM-DD") + ":" + end.format("YYYY-MM-DD") + "/" + name;
+      });
     });
 
-    reduce(requests, [], function(memo, item, callback) {
-      axios.get(item).then(function(response) {
-        var downloads = response.data.downloads;
-        callback(null, memo.concat(downloads));
-      }).catch(callback)
-    }, function(err, downloads) {
+    function getDownloads(memo, items, callback) {
+      const responses = items.map(item => axios.get(item));
+      Promise.all(responses)
+        .then(results => {
+          results.forEach(response => {
+            response.data.downloads.forEach(download => {
+              const existing = memo.find(item => item.day === download.day);
+              if (existing) {
+                existing.downloads += download.downloads;
+              } else {
+                memo.push(download);
+              }
+            });
+          });
+          callback(null, memo);
+        })
+        .catch(error => {
+          console.error(error);
+          callback(error);
+        });
+    }
 
+    reduce(requests, [], function(memo, items, callback) {
+      getDownloads(memo, items, callback);
+    }, function(err, downloads) {
+      downloads.sort((a, b) => a.day.localeCompare(b.day));
       var total = 0;
       var showCurrent = window.location.search.toLowerCase().indexOf("current") >= 0;
       var data = {
